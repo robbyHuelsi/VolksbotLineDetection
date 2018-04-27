@@ -7,8 +7,7 @@ import csv
 import time
 import numpy as np
 import cv2
-
-# from PIL import Image
+import datetime
 
 from std_msgs.msg import String
 from sensor_msgs.msg import CompressedImage
@@ -16,9 +15,11 @@ from geometry_msgs.msg import Twist
 
 home_dir = os.path.expanduser("~")
 full_dir = os.path.join(home_dir, 'recordings')
-img_dir = os.path.join(full_dir, 'imgs')
-img_rate = 1.0
+runtime = str(datetime.datetime.now()).replace(" ", "_").replace(":", "-")[:-7]
+img_dir = os.path.join(full_dir, runtime)
+img_rate = 0.03
 last_stamp = 0
+
 
 def img_callback(img_msg):
     global img_dir, last_stamp, img_rate
@@ -33,9 +34,9 @@ def img_callback(img_msg):
 
 
 def cmd_callback(cmd_msg):
-    global full_dir
+    global full_dir, runtime
 
-    with open(os.path.join(full_dir, 'cmd_vel.csv'), 'a') as csvfile:
+    with open(os.path.join(full_dir, 'cmd_vel_%s.csv' % runtime), 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter=",")
         writer.writerow([time.time(),
 			 cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.linear.z,
@@ -52,10 +53,10 @@ def recorder():
 
     # Initialize the node and subscribe to two topics
     rospy.init_node('recorder', anonymous=True)
-    rospy.Subscriber('/usb_cam/image_raw/compressed', CompressedImage, img_callback)
+    rospy.Subscriber('/image', CompressedImage, img_callback)
     rospy.Subscriber('/cmd_vel', Twist, cmd_callback)
 
-    rospy.loginfo("Recorder is ready!")
+    rospy.loginfo("Recorder ready, started at %s." % runtime)
 
     # Spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

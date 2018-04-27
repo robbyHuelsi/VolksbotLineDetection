@@ -2,6 +2,7 @@
     
 import rospy
 import os
+import glob
 import sys
 import time
 import numpy as np
@@ -12,17 +13,20 @@ import tensorflow.contrib.layers as layers
 
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Twist
-#from cv_bridge import CvBridge
-
-import matplotlib.pyplot as plt
 
 
 class ANNLineFollower():
     def __init__(self):
+	# Init ROS Node such that we can use other rospy functionality afterwards
+        rospy.init_node('line_follower')
+
         # Initialize Tensorflow session
 	self.sess = tf.Session()
         tf.logging.set_verbosity(tf.logging.INFO)
         tf.logging.info("TF Version %s loaded!" % str(tf.__version__))
+
+        self.model_dir = "~/models/"
+        self.load_ckpt()
 
         # TODO Replace the following lines with checkpoint loading
         image = tf.placeholder(tf.float32, [1, 480, 640, 3], 'image')
@@ -40,14 +44,20 @@ class ANNLineFollower():
         self.angular = self.sess.graph.get_tensor_by_name('angular:0')
 
         # Initialize the ROS subscriber and publisher and go into loop afterwards
-	rospy.init_node('line_follower')
         self.sub = rospy.Subscriber('image', CompressedImage, self.img_callback, queue_size=1)
 	self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
         rospy.loginfo("LineFollower is ready!")
 
-        self.once = True
-
         rospy.spin()
+
+    def load_ckpt(self):
+        self.meta_file = glob.glob(os.path.join(self.model_dir, "*.meta"))
+
+        if not self.meta_file:
+            tf.logging.warn("No .meta file found in %s" % self.model_dir)
+        else:
+            saver = tf.train.import_meta_graph(self.meta_file)
+            saver.restore(self.sess, self.model_dir)
 
     def img_callback(self, img_msg):
         # TODO Check: Image conversion from msg -> cv2 (BGR) -> np (RGB)
@@ -56,11 +66,6 @@ class ANNLineFollower():
         np_img = np_img[:, :, ::-1]
 
         # Convert from [0, 255] range to [-1, +1] range
-        if self.once:
-            plt.imshow(np_img)
-            plt.show()
-            self.once =False
-
         np_img = ((np_img / 255.0) - 0.5) * 2
 
         # Do the prediction of the linear and angular values

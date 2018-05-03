@@ -1,10 +1,9 @@
 #!/usr/bin/env python
-    
 import rospy
 import os
 import glob
-import sys
-import time
+# import sys
+# import time
 import numpy as np
 import cv2
 import tensorflow as tf
@@ -17,11 +16,11 @@ from geometry_msgs.msg import Twist
 
 class ANNLineFollower():
     def __init__(self):
-	# Init ROS Node such that we can use other rospy functionality afterwards
+        # Init ROS Node such that we can use other rospy functionality afterwards
         rospy.init_node('line_follower')
 
         # Initialize Tensorflow session
-	self.sess = tf.Session()
+        self.sess = tf.Session()
         tf.logging.set_verbosity(tf.logging.INFO)
         tf.logging.info("TF Version %s loaded!" % str(tf.__version__))
 
@@ -38,14 +37,14 @@ class ANNLineFollower():
         angular = tf.identity(angular, name='angular')
         self.sess.run(tf.global_variables_initializer())
 
-	# Get output tensors by name
+        # Get output tensors by name
         # TODO Adopt to the names according to the loaded checkpoint. How to do it?
         self.linear = self.sess.graph.get_tensor_by_name('linear:0')
         self.angular = self.sess.graph.get_tensor_by_name('angular:0')
 
         # Initialize the ROS subscriber and publisher and go into loop afterwards
         self.sub = rospy.Subscriber('image', CompressedImage, self.img_callback, queue_size=1)
-	self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
+        self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
         rospy.loginfo("LineFollower is ready!")
 
         rospy.spin()
@@ -69,19 +68,19 @@ class ANNLineFollower():
         np_img = ((np_img / 255.0) - 0.5) * 2
 
         # Do the prediction of the linear and angular values
-        linear_pred, angular_pred = self.sess.run([self.linear, self.angular], feed_dict={'image:0': np_img[np.newaxis, :]})
+        linear_pred, angular_pred = self.sess.run([self.linear, self.angular],
+                                                  feed_dict={'image:0': np_img[np.newaxis, :]})
 
         # TODO Depending on the activation function in the last layer we might need to clip those values!
 
         # Create the Twist message and fill the respective fields
-	cmd = Twist()
-	cmd.linear.x = linear_pred
-	cmd.angular.z = angular_pred
+        cmd = Twist()
+        cmd.linear.x = linear_pred
+        cmd.angular.z = angular_pred
 
         # Send the created message to the roscore
-	self.pub.publish(cmd)
+        self.pub.publish(cmd)
 
 
 if __name__ == '__main__':
     follower = ANNLineFollower()
-

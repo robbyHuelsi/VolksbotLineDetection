@@ -2,14 +2,14 @@
 
 import rospy
 import os
-import sys
+# import sys
 import csv
 import time
 import numpy as np
 import cv2
 import datetime
 
-from std_msgs.msg import String
+# from std_msgs.msg import String
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Twist
 
@@ -26,7 +26,7 @@ def img_callback(img_msg):
 
     # Do not always save an image
     if time.time() - last_stamp > img_rate:
-	last_stamp = time.time()
+        last_stamp = time.time()
 
         np_arr = np.fromstring(img_msg.data, np.uint8)
         encoded_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
@@ -39,17 +39,17 @@ def cmd_callback(cmd_msg):
     with open(os.path.join(full_dir, 'cmd_vel_%s.csv' % runtime), 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter=",")
         writer.writerow([time.time(),
-			 cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.linear.z,
-			 cmd_msg.angular.x, cmd_msg.angular.y, cmd_msg.angular.z])	
+                        cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.linear.z,
+                        cmd_msg.angular.x, cmd_msg.angular.y, cmd_msg.angular.z])
 
 
 def recorder():
     # Create the output directory if it does not exist
     if not os.path.exists(full_dir):
-	os.makedirs(full_dir)
+        os.makedirs(full_dir)
 
     if not os.path.exists(img_dir):
-	os.makedirs(img_dir)
+        os.makedirs(img_dir)
 
     # Initialize the node and subscribe to two topics
     rospy.init_node('recorder', anonymous=True)
@@ -64,4 +64,3 @@ def recorder():
 
 if __name__ == '__main__':
     recorder()
-

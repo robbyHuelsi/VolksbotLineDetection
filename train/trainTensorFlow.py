@@ -1,8 +1,6 @@
-import os
 import tensorflow as tf
 import importlib
 import datetime
-from os.path import expanduser
 
 tf.app.flags.DEFINE_string("session_name", str(datetime.datetime.now()).
                            replace(" ", "_").replace(":", "-")[:-7],
@@ -21,34 +19,6 @@ tf.app.flags.DEFINE_integer("epochs", 10,
 tf.app.flags.DEFINE_integer("batch_size", 4,
                             "Number of training samples in one batch.")
 FLAGS = tf.app.flags.FLAGS
-
-
-def input_fn():
-    # TODO Think about how the input_fn loads images and controls lazy and
-    # controlled way. Number of epochs is defined, number of iterations depends
-    # on the batch size and number of samples in the training set.
-    # TODO Instead of this fixed directory it would be better to use
-    # FLAGS.dataset_dir somehow.
-    # TODO Dataset directory will contain the folders "train" and "test" later
-    # on, we should already account for this.
-    recordingsFolder = os.path.join(expanduser("~"), "recordings")      # Get recordings folder
-
-    cmdVelFiles = []
-    imgsFolders = {}
-
-    for directory, dirnames, filenames in os.walk(recordingsFolder):
-        if directory == recordingsFolder:
-            for f in filenames:
-                fName, fExtension = os.path.splitext(f)
-                if fExtension == ".csv":
-                    cmdVelFiles.append(fName)
-        else:
-            # print directory
-            # tmpImgs = []
-            # for f in filenames:
-            imgsFolders[directory] = filenames
-
-    # print imgsFolders
 
 
 def main(argvs=None):

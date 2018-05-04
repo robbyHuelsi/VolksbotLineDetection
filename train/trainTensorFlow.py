@@ -3,6 +3,7 @@ import importlib
 import datetime
 import os
 import numpy as np
+import glob
 from inputFunctions import getImgAndCommandList
 
 tf.app.flags.DEFINE_string("session_name", str(datetime.datetime.now()).
@@ -21,27 +22,30 @@ tf.app.flags.DEFINE_integer("epochs", 10,
                             "Training runs for this number of epochs.")
 tf.app.flags.DEFINE_integer("batch_size", 4,
                             "Number of training samples in one batch.")
-tf.app.flags.DEFINE_integer("width", 1280,
+tf.app.flags.DEFINE_integer("width", 224,
                             "Width of the images that enter the network.")
-tf.app.flags.DEFINE_integer("height", 720,
+tf.app.flags.DEFINE_integer("height", 224,
                             "Height of the images that enter the network.")
 FLAGS = tf.app.flags.FLAGS
 
 
 def create_dataset(epochs, batch_size):
-    filename, controls = getImgAndCommandList()
-    dataset = tf.data.Dataset.from_tensor_slices((filename, controls))
-    dataset.batch(batch_size)
-    dataset.repeat(epochs)
-    dataset.shuffle(128)
-    dataset.map(load_img)
+    # filename, controls = getImgAndCommandList(FLAGS.dataset_dir)
+    filenames = glob.glob("/home/florian/recordings/2018-04-23_12-13-51/*.jpg")
+    controls = list(range(len(filenames)))
 
-    return dataset, np.ceil(len(filename)/batch_size)
+    dataset = tf.data.Dataset.from_tensor_slices((filenames, controls))
+    dataset = dataset.map(load_img)
+    dataset = dataset.batch(batch_size)
+    dataset = dataset.repeat(epochs)
+    dataset = dataset.shuffle(128)
+
+    return dataset, int(np.ceil(len(filenames) / batch_size))
 
 
 def load_img(filename, label):
     image_string = tf.read_file(filename)
-    image_decoded = tf.image.decode_jpeg(image_string)
+    image_decoded = tf.image.decode_image(image_string)
     image_resized = tf.image.resize_bilinear(image_decoded, [FLAGS.height, FLAGS.width])
 
     return image_resized, label
@@ -63,6 +67,16 @@ def main(argvs=None):
     # Create the tensorflow session
     sess = tf.Session()
 
+    # TODO How to load checkpoints, saved models from previous runs?
+    # TODO How to do the training exactly
+    dataset, iterations = create_dataset(FLAGS.epochs, FLAGS.batch_size)
+
+    iterator = dataset.make_one_shot_iterator()
+    next = iterator.get_next()
+
+    input_pl = tf.placeholder(dtype=tf.float32, shape=[None, 224, 224, 3], name='input')
+    output_pl = tf.placeholder(dtype=tf.float32, shape=[], name='output')
+
     # Import the keras model file dynamically if specified or exit otherwise
     if FLAGS.keras_model is None:
         tf.logging.warn("Keras model file has to be specified!")
@@ -71,18 +85,17 @@ def main(argvs=None):
         keras_model_module = \
             importlib.import_module("models.{}".format(FLAGS.keras_model))
 
-        model = keras_model_module.build_model()
+    model = keras_model_module.build_model(input_pl, FLAGS)
+    model.compile(optimizer=tf.keras.optimizers.Adam(lr=0.001, beta_1=0.9,
+                                                     beta_2=0.999, epsilon=None,
+                                                     decay=0.0, amsgrad=False),
+                  loss='mean_squared_error')
 
     # Output for TensorBoard and model file will be inside FLAGS.tb_dir
     save_dir = os.path.join(FLAGS.tb_dir, "{}_{}".format(model.name,
                                                          FLAGS.session_name))
 
-    # TODO How to load checkpoints, saved models from previous runs?
-    # TODO How to do the training exactly
-    dataset, iterations = create_dataset(FLAGS.epochs, FLAGS.batch_size)
-
-    iterator = dataset.make_one_shot_iterator()
-    next = iterator.get_next()
+    # model.fit(data, labels, epochs=FLAGS.epochs, batch_size=FLAGS.batch_size)
 
     for epoch in range(FLAGS.epochs):
         for iteration in range(iterations):

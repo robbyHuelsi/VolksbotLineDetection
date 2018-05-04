@@ -66,19 +66,23 @@ def getImgAndCommandList(recordingsFolder):
 def getCmdDir(path):
     reader = csv.reader(open(path, 'r'))
     cmdDir = {}
-    cmd = {}
     for row in reader:
-        cmd["valX"] = row[1]
-        cmd["valYaw"] = row[6]
+        cmd = {}
+        cmd["valX"] = str(row[1])
+        cmd["valYaw"] = str(row[6])
         timestamp = float(row[0])
         cmdDir[timestamp] = cmd
     return cmdDir
 
 
 def meanCmd(cmdDir, thisImgName, nextImgName):
-    print cmdDir
-    print thisImgName
-    print nextImgName
+    startTimestamp = float(thisImgName)/1000000000
+    endTimestamp = float(nextImgName)/1000000000
+    for timestamp, cmd in cmdDir.iteritems():
+        if timestamp >= startTimestamp and timestamp < endTimestamp:
+            print cmd
+    print startTimestamp
+    print endTimestamp
     print ""
 
     velX = 0

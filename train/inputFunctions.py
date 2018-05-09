@@ -6,8 +6,6 @@
 import os
 import collections
 import csv
-from StdSuites.AppleScript_Suite import string
-
 
 def getImgAndCommandList(recordingsFolder, printInfo = False):
     cmdVelFiles = []

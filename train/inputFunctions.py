@@ -6,9 +6,10 @@
 import os
 import collections
 import csv
+from StdSuites.AppleScript_Suite import string
 
 
-def getImgAndCommandList(recordingsFolder):
+def getImgAndCommandList(recordingsFolder, printInfo = False):
     cmdVelFiles = []
     imgsFolders = {}
     inputList = []
@@ -20,9 +21,6 @@ def getImgAndCommandList(recordingsFolder):
                 if fExtension == ".csv":
                     cmdVelFiles.append(fName)
         else:
-            # print directory
-            # tmpImgs = []
-            # for f in filenames:
             imgsFolders[directory] = filenames
 
     imgsFolders = collections.OrderedDict(sorted(imgsFolders.items()))
@@ -38,30 +36,36 @@ def getImgAndCommandList(recordingsFolder):
             for i in range(countImgFiles-1):  # ...until last but one
                 thisFileName, thisFileExt = os.path.splitext(imgFiles[i])
                 if thisFileExt == ".jpg":
-                    # print str(i), ": ", thisFileName
                     nextFileName = ""
                     if i+1 <= countImgFiles:
                         for j in range(i+1, countImgFiles):
                             nextFN, nextFE = os.path.splitext(imgFiles[j])
                             if nextFE == ".jpg":
                                 nextFileName = nextFN
-                                # print str(j), ": ", nextFileName
                                 break
                     if nextFileName != "":
                         inputDir = {}
                         velX, velYaw = meanCmd(cmdDir,
                                                thisFileName,
-                                               nextFileName)
+                                               nextFileName,
+                                               printInfo)
                         inputDir["imgPath"] = os.path.join(imgFolder,
                                                            thisFileName
                                                            + thisFileExt)
                         inputDir["velX"] = velX
                         inputDir["velYaw"] = velYaw
+                        inputList.append(inputDir)
+                        
+                        if printInfo:
+                            print inputDir
+                            print
         else:
             print "!!! NOT FOUND: ", str(csvFilePath)
-
-        # print imgFolder, ": ", str(imgFiles)
-
+            
+    if not inputList:
+        return inputList
+    else:
+        print "!!! NO INPUT"
 
 def getCmdDir(path):
     reader = csv.reader(open(path, 'r'))
@@ -75,22 +79,29 @@ def getCmdDir(path):
     return cmdDir
 
 
-def meanCmd(cmdDir, thisImgName, nextImgName):
+def meanCmd(cmdDir, thisImgName, nextImgName, printInfo = False):
     startTimestamp = float(thisImgName)/1000000000
     endTimestamp = float(nextImgName)/1000000000
+    sumValX = 0
+    sumValYaw = 0
+    countCmds = 0
     for timestamp, cmd in cmdDir.iteritems():
         if timestamp >= startTimestamp and timestamp < endTimestamp:
-            print cmd
-    print startTimestamp
-    print endTimestamp
-    print ""
+            countCmds += 1
+            sumValX += float(cmd["valX"])
+            sumValYaw += float(cmd["valYaw"])
+            
+    avVelX = sumValX / countCmds if countCmds > 0 else 0
+    avVelYaw = sumValYaw / countCmds if countCmds > 0 else 0
+    
+    if printInfo:
+        print "Between ", str(startTimestamp), " and ", str(endTimestamp), "is 1 command:" if countCmds == 1 else " are " + str(countCmds) + " commands:"
+        print "av. velX:    ", str(avVelX)
+        print "av. velYaw:  ", str(avVelYaw)
 
-    velX = 0
-    velYaw = 0
-
-    return velX, velYaw
+    return avVelX, avVelYaw
 
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
-    getImgAndCommandList(recordingsFolder)
+    getImgAndCommandList(recordingsFolder, printInfo = True)

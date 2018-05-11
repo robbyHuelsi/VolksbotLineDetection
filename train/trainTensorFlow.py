@@ -3,8 +3,7 @@ import importlib
 import datetime
 import os
 import numpy as np
-import tqdm
-from inputFunctions import create_dataset
+from inputFunctions import ImageBachGenerator
 
 
 tf.app.flags.DEFINE_string("session_name", str(datetime.datetime.now()).
@@ -29,6 +28,8 @@ tf.app.flags.DEFINE_integer("height", 224,
                             "Height of the images that enter the network.")
 tf.app.flags.DEFINE_string("feature_key", "imgPath",
                            "The feature key that ")
+tf.app.flags.DEFINE_string("weights_file", "weights.h5",
+                           "Name of the saved weights file.")
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -48,53 +49,47 @@ def main(argvs=None):
     np.random.seed(0)
     tf.set_random_seed(0)
 
-    # Create the tensorflow session
-    sess = tf.Session()
-    sess.run(tf.global_variables_initializer())
-
-    # TODO How to load checkpoints, saved models from previous runs?
-    # TODO How to do the training exactly
-    dataset, iterations = create_dataset(FLAGS.dataset_dir, FLAGS.epochs, FLAGS.batch_size)
-
-    iterator = dataset.make_one_shot_iterator()
-    next_img, next_ctrl = iterator.get_next()
-
+    # Finalize the model by building and compiling it
     input_tensor = tf.keras.Input((224, 224, 3), FLAGS.batch_size)
     model = keras_model_module.build_model(input_tensor, FLAGS)
-    model.compile(optimizer=tf.keras.optimizers.Adam(lr=0.001),
+    model.compile(optimizer=tf.keras.optimizers.Adam(lr=0.0001),
                   loss='mean_squared_error')
 
     # Output for TensorBoard and model file will be inside FLAGS.tb_dir
     save_dir = os.path.join(FLAGS.tb_dir, "{}_{}".format(model.name,
                                                          FLAGS.session_name))
-    tf.keras.callbacks.TensorBoard(log_dir=save_dir, histogram_freq=1,
-                                   batch_size=FLAGS.batch_size, write_graph=True,
-                                   write_grads=True, write_images=False)
+    weights_file = os.path.join(save_dir, FLAGS.weights_file)
 
-    t_epochs = tqdm.trange(FLAGS.epochs, desc='Epochs')
-    t_iters = tqdm.trange(iterations, desc='Iterations')
-
-    for _ in t_epochs:
-        for _ in t_iters:
-            x_batch, y_batch = sess.run([next_img, next_ctrl])
-            loss = model.train_on_batch(x_batch, y_batch)
-            t_iters.set_description("Loss: {}".format(np.round(loss, 4)))
-            t_iters.refresh()
-
-    # Save model and weights
+    # Create a model specific directory where the weights are saved
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
+    elif os.path.exists(weights_file):
+        # If the model directory already exists, try to recover already saved weights
+        tf.logging.info("Restoring weights from {}!".format(weights_file))
+        model.load_weights(weights_file)
 
-    model.save(save_dir)
-    tf.logging.info('Saved trained model at {} '.format(save_dir))
+    # Tensorboard callback
+    tb_callback = tf.keras.callbacks.TensorBoard(log_dir=save_dir, histogram_freq=1,
+                                                 batch_size=FLAGS.batch_size, write_graph=True,
+                                                 write_grads=False, write_images=False)
+
+    # The image batch generator that handles the image loading
+    batch_gen = ImageBachGenerator(FLAGS.dataset_dir, batch_size=FLAGS.batch_size, dim=(FLAGS.height, FLAGS.width))
+
+    model.fit_generator(generator=batch_gen, epochs=FLAGS.epochs, shuffle=True, workers=4, callbacks=[tb_callback])
+
+    # Save the current model weights
+    model.save_weights(weights_file)
+    tf.logging.info('Saved model weights to {} '.format(weights_file))
 
     # Load the test dataset
-    x_test, y_test = None
+    x_test, y_test = None, None
 
-    # Score trained model.
-    scores = model.evaluate(x_test, y_test, verbose=1)
-    tf.logging.info('Test loss: {}'.format(scores[0]))
-    tf.logging.info('Test accuracy: {}'.format(scores[1]))
+    if x_test is not None and y_test is not None:
+        # Score trained model.
+        scores = model.evaluate(x_test, y_test, verbose=1)
+        tf.logging.info('Test loss: {}'.format(scores[0]))
+        tf.logging.info('Test accuracy: {}'.format(scores[1]))
 
 
 if __name__ == "__main__":

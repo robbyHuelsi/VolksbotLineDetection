@@ -21,7 +21,7 @@ def build_model(input_tensor, flags):
 
     x = Reshape((1, 1, 7 * 7 * 1024))(x)
     x = tf.keras.layers.Dense(1, activation='linear', name='predictions')(x)
-    predictions = tf.keras.backend.squeeze(Reshape((1, ))(x), 1)
+    predictions = Reshape((1, ))(x)
     mobnet_extended = tf.keras.Model(inputs=input_tensor, outputs=predictions,
                                      name='mobnet_extended')
 

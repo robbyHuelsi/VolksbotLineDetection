@@ -7,11 +7,10 @@ from __future__ import print_function
 import os
 import collections
 import csv
-import tensorflow as tf
 import numpy as np
-from tensorflow.contrib.data import batch_and_drop_remainder
-
-FLAGS = tf.app.flags.FLAGS
+import tensorflow as tf
+import matplotlib.pyplot as plt
+from PIL import Image
 
 
 def getImgAndCommandList(recordingsFolder, printInfo = False):
@@ -107,38 +106,64 @@ def meanCmd(cmdDir, thisImgName, nextImgName, printInfo = False):
     return avVelX, avVelYaw
 
 
-def create_dataset(directory, epochs, batch_size):
-    dataList = getImgAndCommandList(directory)
+class ImageBachGenerator(tf.keras.utils.Sequence):
+    """Generates data for Keras"""
 
-    # TODO Make this selection configurable by FLAGS
-    filenames = [x["imgPath"] for x in dataList]
-    controls = [x["velYaw"] for x in dataList]
+    def __init__(self, dataset_dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True):
+        """Initialization"""
+        self.dim = dim
+        self.batch_size = batch_size
 
-    dataset = tf.data.Dataset.from_tensor_slices((filenames, controls))
-    dataset = dataset.map(load_img)
-    dataset = dataset.shuffle(buffer_size=128)
-    dataset = dataset.apply(batch_and_drop_remainder(batch_size))
-    dataset = dataset.repeat(epochs)
+        # Create the data list from dataset directory
+        data_list = getImgAndCommandList(dataset_dir)
 
-    return dataset, int(np.ceil(len(filenames) / batch_size))
+        self.img_paths = [sample["imgPath"] for sample in data_list]
+        self.labels = [sample["velYaw"] for sample in data_list]
+        self.n_channels = n_channels
+        self.shuffle = shuffle
+        self.indexes = np.arange(len(self.img_paths))
 
+        self.on_epoch_end()
 
-def load_img(filename, label):
-    # Load the image with TensorFlow methods
-    image_string = tf.read_file(filename)
-    image_decoded = tf.image.decode_image(image_string, channels=3)
-    image_decoded = tf.expand_dims(image_decoded, axis=0)
-    image_resized = tf.image.resize_bilinear(image_decoded, [FLAGS.height, FLAGS.width])
-    image_resized = tf.squeeze(image_resized, axis=0)
-    # Bring the image to floating point values in range [0.0, 1.0]
-    image_rescaled = tf.image.convert_image_dtype(image_resized, tf.float32)
+    def __len__(self):
+        """ Denotes the number of batches per epoch """
+        return int(np.floor(len(self.img_paths) / self.batch_size))
 
-    return image_rescaled, label
+    def __getitem__(self, index):
+        """ Generate one batch of data """
+        # Generate indexes of the batch
+        indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
 
+        # Select image paths and labels with these indexes
+        img_paths_batch = [self.img_paths[k] for k in indexes]
+        y_batch = [self.labels[k] for k in indexes]
 
-def augment_image(filename, label):
-    # TODO Implement later if needed (e.g. random gaussian noise, random left-right flip
-    return filename, label
+        print(indexes)
+        print(img_paths_batch)
+        print(y_batch)
+
+        # Loading the images via path batch
+        x_batch = self.__data_generation(img_paths_batch)
+
+        return x_batch, y_batch
+
+    def on_epoch_end(self):
+        """ Updates indexes after each epoch """
+        if self.shuffle:
+            np.random.shuffle(self.indexes)
+
+    def __data_generation(self, img_paths_batch):
+        """ Generates data containing batch_size samples """
+        # Initialization
+        x_batch = np.empty((self.batch_size, *self.dim, self.n_channels))
+
+        # Generate data
+        for i, img_path in enumerate(img_paths_batch):
+            # Store sample
+            # TODO Do correct resizing/cropping here
+            x_batch[i, ] = np.float32(Image.open(img_path).resize(self.dim, resample=Image.BILINEAR))
+
+        return x_batch
 
 
 if __name__ == "__main__":

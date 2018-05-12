@@ -3,6 +3,8 @@ import importlib
 import datetime
 import os
 import numpy as np
+
+
 from inputFunctions import ImageBachGenerator
 
 
@@ -30,6 +32,8 @@ tf.app.flags.DEFINE_string("feature_key", "imgPath",
                            "The feature key that ")
 tf.app.flags.DEFINE_string("weights_file", "weights.h5",
                            "Name of the saved weights file.")
+tf.app.flags.DEFINE_integer("split_ind", 6992,
+                            "Index where the data set will be split into training and validation set.")
 FLAGS = tf.app.flags.FLAGS
 
 
@@ -53,7 +57,7 @@ def main(argvs=None):
     input_tensor = tf.keras.Input((224, 224, 3), FLAGS.batch_size)
     model = keras_model_module.build_model(input_tensor, FLAGS)
     model.compile(optimizer=tf.keras.optimizers.Adam(lr=0.0001),
-                  loss='mean_squared_error')
+                  loss='mean_squared_error', metrics=['mse'])
 
     # Output for TensorBoard and model file will be inside FLAGS.tb_dir
     save_dir = os.path.join(FLAGS.tb_dir, "{}_{}".format(model.name,
@@ -69,27 +73,30 @@ def main(argvs=None):
         model.load_weights(weights_file)
 
     # Tensorboard callback
-    tb_callback = tf.keras.callbacks.TensorBoard(log_dir=save_dir, histogram_freq=1,
-                                                 batch_size=FLAGS.batch_size, write_graph=True,
-                                                 write_grads=False, write_images=False)
+    tb_callback = tf.keras.callbacks.TensorBoard(log_dir=save_dir, batch_size=FLAGS.batch_size, write_graph=True,
+                                                 histogram_freq=0,  # Setting this to 1 will produce a failure at
+                                                                    # training procedure end
+                                                 write_grads=False,  # Setting this to True will produce a failure at
+                                                                     # training procedure start
+                                                 write_images=False)  # Not necessary
 
     # The image batch generator that handles the image loading
-    batch_gen = ImageBachGenerator(FLAGS.dataset_dir, batch_size=FLAGS.batch_size, dim=(FLAGS.height, FLAGS.width))
+    train_gen = ImageBachGenerator(FLAGS.dataset_dir, batch_size=FLAGS.batch_size, dim=(FLAGS.height, FLAGS.width),
+                                   end_ind=FLAGS.split_ind)
+    val_gen = ImageBachGenerator(FLAGS.dataset_dir, batch_size=FLAGS.batch_size, dim=(FLAGS.height, FLAGS.width),
+                                 start_ind=FLAGS.split_ind)
 
-    model.fit_generator(generator=batch_gen, epochs=FLAGS.epochs, shuffle=True, workers=4, callbacks=[tb_callback])
+    # Fit the model to the data by previously defined conditions (optimizer, loss ...)
+    model.fit_generator(generator=train_gen, epochs=FLAGS.epochs, shuffle=True, workers=4, callbacks=[tb_callback])
 
     # Save the current model weights
     model.save_weights(weights_file)
     tf.logging.info('Saved model weights to {} '.format(weights_file))
 
-    # Load the test dataset
-    x_test, y_test = None, None
-
-    if x_test is not None and y_test is not None:
-        # Score trained model.
-        scores = model.evaluate(x_test, y_test, verbose=1)
-        tf.logging.info('Test loss: {}'.format(scores[0]))
-        tf.logging.info('Test accuracy: {}'.format(scores[1]))
+    # Use the validation generator for model evaluation
+    if len(val_gen) > 0:
+        scores = model.evaluate_generator(val_gen, workers=4, use_multiprocessing=True)
+        tf.logging.info('Final loss: {}'.format(scores[0]))
 
 
 if __name__ == "__main__":

@@ -109,7 +109,8 @@ def meanCmd(cmdDir, thisImgName, nextImgName, printInfo = False):
 class ImageBachGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
-    def __init__(self, dataset_dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True):
+    def __init__(self, dataset_dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True,
+                 start_ind=None, end_ind=None):
         """Initialization"""
         self.dim = dim
         self.batch_size = batch_size
@@ -118,7 +119,10 @@ class ImageBachGenerator(tf.keras.utils.Sequence):
         data_list = getImgAndCommandList(dataset_dir)
 
         self.img_paths = [sample["imgPath"] for sample in data_list]
+        self.img_paths = self.img_paths[start_ind:end_ind]
         self.labels = [sample["velYaw"] for sample in data_list]
+        self.labels = self.labels[start_ind:end_ind]
+
         self.n_channels = n_channels
         self.shuffle = shuffle
         self.indexes = np.arange(len(self.img_paths))
@@ -137,10 +141,6 @@ class ImageBachGenerator(tf.keras.utils.Sequence):
         # Select image paths and labels with these indexes
         img_paths_batch = [self.img_paths[k] for k in indexes]
         y_batch = [self.labels[k] for k in indexes]
-
-        print(indexes)
-        print(img_paths_batch)
-        print(y_batch)
 
         # Loading the images via path batch
         x_batch = self.__data_generation(img_paths_batch)

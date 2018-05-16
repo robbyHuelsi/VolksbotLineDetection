@@ -3,42 +3,46 @@ import json
 from tkinter import *
 from PIL import ImageTk, Image
 
+import inputFunctions
 
 # View and Controll
 class imgAndCmdWindow():
-    def __init__(self, msg, imgPath, velX, velYaw):
+    def __init__(self, imgAndCommandList):
+        this.imgAndCommandList = imgAndCommandList
+        this.i = 0
+        window = Tk()
+        window.title(str(this.imgAndCommandList[this.i]["imgPath"]))
 
-        self.inputbox.title(msg)
         # self.inputbox.state("zoomed")
 
-        imgFrame = Image.open(imgPath)
-        imgFrameResized = imgFrame.resize((800, 600), Image.ANTIALIAS)
+        imgFrame = Image.open(this.Img)
+        imgFrameResized = imgFrame.resize((600, 600), Image.ANTIALIAS)
         itkFrame = ImageTk.PhotoImage(imgFrameResized)
-        lFrame = Label(self.inputbox, image=itkFrame)
+        lFrame = Label(window, image=itkFrame)
         lFrame.grid(row=0, columnspan=3)
 
-        lVelX = Label(self.inputbox, text="Vel. X")
-        self.eVelX = Entry(self.inputbox)
+        lVelX = Label(window, text="Vel. X")
+        self.eVelX = Entry(window)
         self.eVelX.insert(END, velX)
         lVelX.grid(row=2, sticky="e")
         self.eVelX.grid(row=2, column=1, columnspan=2)
         self.eVelX.focus_set()
 
-        lVelYaw = Label(self.inputbox, text="Vel. Yaw")
-        self.eVelVaw = Entry(self.inputbox)
-        self.eVelVaw.insert(END, eVelVaw)
+        lVelYaw = Label(window, text="Vel. Yaw")
+        self.eVelYaw = Entry(window)
+        self.eVelYaw.insert(END, velYaw)
         lVelYaw.grid(row=3, sticky="e")
-        self.eCin.grid(row=3, column=1, columnspan=2)
+        self.eVelYaw.grid(row=3, column=1, columnspan=2)
 
-        bForward = Button(self.inputbox, text="Forward",
-                          width=10, command=self._bDoneClicked)
+        bForward = Button(window, text="Forward",
+                          width=10, command=self._bForwardClicked)
         bForward.grid(row=6, column=1)
 
-        bBackward = Button(self.inputbox, text="Backward",
-                           width=10, command=self._bNextClicked)
+        bBackward = Button(window, text="Backward",
+                           width=10, command=self._bBackwardClicked)
         bBackward.grid(row=6, column=2)
 
-        self.inputbox.mainloop()
+        window.mainloop()
 
     def _buttonClicked(self, status):
         self.labelId = self.svLabelId.get()
@@ -47,7 +51,6 @@ class imgAndCmdWindow():
         self.ean = self.eEan.get()
         self.quantity = self.eQuantity.get()
         self.status = status
-        self.inputbox.destroy()
 
     def _bForwardClicked(self):
         self._buttonClicked("forward")
@@ -64,6 +67,6 @@ class imgAndCmdWindow():
 
 
 if __name__ == "__main__":
-    testPath = os.path.join(os.path.expanduser("~"), "recordings",
-                            "2018-04-23_12-02-26", "1524477746744130648.jpg")
-    window1 = imgAndCmdWindow("hello!", testPath, "1", "2")
+    recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
+    imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder)
+    app = imgAndCmdWindow(imgAndCommandList)

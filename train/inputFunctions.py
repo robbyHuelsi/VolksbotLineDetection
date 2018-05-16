@@ -9,7 +9,6 @@ import collections
 import csv
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
 from PIL import Image
 
 
@@ -106,7 +105,7 @@ def meanCmd(cmdDir, thisImgName, nextImgName, printInfo = False):
     return avVelX, avVelYaw
 
 
-class ImageBachGenerator(tf.keras.utils.Sequence):
+class ImageBatchGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
     def __init__(self, dataset_dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True,
@@ -159,9 +158,14 @@ class ImageBachGenerator(tf.keras.utils.Sequence):
 
         # Generate data
         for i, img_path in enumerate(img_paths_batch):
-            # Store sample
-            # TODO Do correct resizing/cropping here
-            x_batch[i, ] = np.float32(Image.open(img_path).resize(self.dim, resample=Image.BILINEAR))
+            # Open, crop, resize and rescale the image
+            # TODO Make the preprocessing step inside the ImageBatchGenerator more configurable
+            img = Image.open(img_path)
+            img = img.crop((380, 0, 1100, 720))
+            img = img.resize(self.dim, resample=Image.BILINEAR)
+            # Tensorflow (especially mobile net) requires pixel values to be in range [-1.0, 1.0]
+            nd_img = (np.float32(img) / 127.5) - 1.0
+            x_batch[i, ] = nd_img
 
         return x_batch
 

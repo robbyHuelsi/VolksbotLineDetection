@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.python.keras.layers import Reshape, GlobalAveragePooling2D, Dropout, Conv2D, Activation
+from tensorflow.python.keras.layers import Reshape
 
 
 def build_model(input_tensor, flags):
@@ -13,8 +13,12 @@ def build_model(input_tensor, flags):
                                                    input_tensor=input_tensor)
 
     # Disable training for the convolutional layers
-    for layer in mobnet_basic.layers:
+    for index, layer in enumerate(mobnet_basic.layers):
         layer.trainable = False
+        # if index < 89:
+            # mobnet_basic.layers[index].trainable = False
+            # print("{}#{}, trainable={}".format(index, layer.name, layer.trainable))
+            # layer.trainable = False
 
     # Extend mobile net by own fully connected layer
     x = mobnet_basic.layers[-1].output

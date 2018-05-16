@@ -58,7 +58,7 @@ def getImgAndCommandList(recordingsFolder, printInfo = False):
                         inputDir["velX"] = velX
                         inputDir["velYaw"] = velYaw
                         inputList.append(inputDir)
-                        
+
                         if printInfo:
                             print(inputDir)
         else:
@@ -93,10 +93,10 @@ def meanCmd(cmdDir, thisImgName, nextImgName, printInfo = False):
             countCmds += 1
             sumValX += float(cmd["valX"])
             sumValYaw += float(cmd["valYaw"])
-            
+
     avVelX = sumValX / countCmds if countCmds > 0 else 0
     avVelYaw = sumValYaw / countCmds if countCmds > 0 else 0
-    
+
     if printInfo:
         print("Between ", str(startTimestamp), " and ", str(endTimestamp), "is 1 command:" if countCmds == 1 else " are " + str(countCmds) + " commands:")
         print("av. velX:    ", str(avVelX))
@@ -172,4 +172,4 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
-    res = getImgAndCommandList(recordingsFolder, printInfo=True)
+    res = getImgAndCommandList(recordingsFolder, printInfo=False)

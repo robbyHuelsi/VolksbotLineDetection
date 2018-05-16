@@ -109,18 +109,21 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
     def __init__(self, dataset_dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True,
-                 start_ind=None, end_ind=None):
+                 start_ind=None, end_ind=None, preprocess_input_fn=None):
         """Initialization"""
         self.dim = dim
         self.batch_size = batch_size
+        self.preprocess_input_fn=preprocess_input_fn
 
         # Create the data list from dataset directory
         data_list = getImgAndCommandList(dataset_dir)
 
-        self.img_paths = [sample["imgPath"] for sample in data_list]
-        self.img_paths = self.img_paths[start_ind:end_ind]
-        self.labels = [sample["velYaw"] for sample in data_list]
+        self.labels = [sample["velYaw"] for sample in data_list
+                       if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]
         self.labels = self.labels[start_ind:end_ind]
+        self.img_paths = [sample["imgPath"] for sample in data_list
+                          if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]
+        self.img_paths = self.img_paths[start_ind:end_ind]
 
         self.n_channels = n_channels
         self.shuffle = shuffle
@@ -151,6 +154,15 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
         if self.shuffle:
             np.random.shuffle(self.indexes)
 
+    def __std_preprocess_input(self, path):
+        # Open, crop, resize and rescale the image
+        img = Image.open(path)
+        img = img.crop((380, 0, 1100, 720))
+        img = img.resize(self.dim, resample=Image.BILINEAR)
+        nd_img = (np.float32(img) / 127.5) - 1.0
+
+        return nd_img
+
     def __data_generation(self, img_paths_batch):
         """ Generates data containing batch_size samples """
         # Initialization
@@ -158,14 +170,10 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
 
         # Generate data
         for i, img_path in enumerate(img_paths_batch):
-            # Open, crop, resize and rescale the image
-            # TODO Make the preprocessing step inside the ImageBatchGenerator more configurable
-            img = Image.open(img_path)
-            img = img.crop((380, 0, 1100, 720))
-            img = img.resize(self.dim, resample=Image.BILINEAR)
-            # Tensorflow (especially mobile net) requires pixel values to be in range [-1.0, 1.0]
-            nd_img = (np.float32(img) / 127.5) - 1.0
-            x_batch[i, ] = nd_img
+            if self.preprocess_input_fn:
+                x_batch[i, ] = self.preprocess_input_fn(img_path)
+            else:
+                x_batch[i, ] = self.__std_preprocess_input(img_path)
 
         return x_batch
 

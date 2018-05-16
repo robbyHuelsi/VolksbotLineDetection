@@ -1,8 +1,12 @@
 import tensorflow as tf
+import numpy as np
 from tensorflow.python.keras.layers import Reshape
+from PIL import Image
 
 
-def build_model(input_tensor, flags):
+def build_model(flags):
+    input_tensor = tf.keras.Input((224, 224, 3), flags.batch_size)
+
     if input_tensor is None:
         input_shape = (flags.height, flags.width, 3)
     else:
@@ -30,3 +34,13 @@ def build_model(input_tensor, flags):
                                      name='mobnet_extended')
 
     return mobnet_extended
+
+
+def preprocess_input(path):
+    # Open, crop, resize and rescale the image
+    img = Image.open(path)
+    img = img.crop((380, 0, 1100, 720))
+    img = img.resize((224, 224), resample=Image.BILINEAR)
+
+    return tf.keras.applications.mobilenet.preprocess_input(np.float32(img))
+

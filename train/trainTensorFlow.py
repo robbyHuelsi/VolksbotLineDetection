@@ -48,15 +48,12 @@ def main(argvs=None):
     # Define keras model as None initially
     model = None
 
-    # TODO Think about moving this to mobilenet.py because the resoltion is mobilenet specific
-    input_tensor = tf.keras.Input((224, 224, 3), FLAGS.batch_size)
-
     # Build the model depending on the set flags either from keras model definition in code
     # or restore the model from hdf5 file
     if FLAGS.keras_model:
         # Import the keras model file dynamically if specified or exit otherwise
         keras_model_module = importlib.import_module("models.{}".format(FLAGS.keras_model))
-        model = keras_model_module.build_model(input_tensor, FLAGS)
+        model = keras_model_module.build_model(FLAGS)
     elif FLAGS.restore_file and os.path.exists(FLAGS.restore_file):
         # Restore the keras model from a restore file
         model = tf.keras.models.load_model(FLAGS.restore_file)

@@ -8,13 +8,15 @@ from threading import Thread
 import inputFunctions
 
 # View and Controll
-class imgAndCmdWindow():
+class ImgAndCmdWindow():
     def __init__(self, imgAndCommandList):
         self.imgAndCommandList = imgAndCommandList
         self.i = 0
         self.window = Tk()
         self.window.title(str(self.imgAndCommandList[self.i]["imgPath"]))
-        self.player = self.Player(self)
+
+        self.player = self.Player(parent=self)
+        self.isPlaying = False
 
         # self.inputbox.state("zoomed")
 
@@ -86,33 +88,24 @@ class imgAndCmdWindow():
         self.backward()
 
     def _bPlayPausedClicked(self):
-        if self.player.isPlaying():
-            self.player.stop()
+        if self.isPlaying:
+            self.isPlaying = False
+            self.player._stop()
             self.bPlayStop.config(text="Play")
         else:
-            self.player.play()
+            self.isPlaying = True
+            self.player.start()
             self.bPlayStop.config(text="Stop")
 
     class Player(Thread):
-        def __init__(self, imgAndCmdWindow):
-            self.imgAndCmdWindow = imgAndCmdWindow
-            self.playing = False
-
-        def play(self):
-            self.playing = True
-            self.run()
-
-        def stop(self):
-            self.playing = False
-
-        def isPlaying(self):
-            return self.playing
+        def __init__(self, parent=None):
+            self.parent = parent
+            super(ImgAndCmdWindow.Player, self).__init__()
 
         def run(self):
-            if self.playing:
-                self.imgAndCmdWindow.forward()
-                time.sleep(0.5)
-                #self.run()
+            self.parent.forward()
+            time.sleep(0.04)
+            self.run()
 
 
 
@@ -126,4 +119,4 @@ class imgAndCmdWindow():
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
     imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder)
-    app = imgAndCmdWindow(imgAndCommandList)
+    app = ImgAndCmdWindow(imgAndCommandList)

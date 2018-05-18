@@ -120,6 +120,7 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
 
         # Create the data list from dataset directory
         data_list = getImgAndCommandList(dataset_dir)
+        assert data_list is not None, "No images and velocity commands where found!"
 
         self.labels = [sample["velYaw"] for sample in data_list
                        if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]

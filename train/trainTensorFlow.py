@@ -3,77 +3,80 @@ import importlib
 import datetime
 import os
 import numpy as np
-
-
 from inputFunctions import ImageBatchGenerator
 
 
+# Hyperparameters of the training run
+tf.app.flags.DEFINE_string("model_file", None,
+                           "Relative path to either a python module in models directory or hdf5-saved model file.")
+tf.app.flags.DEFINE_boolean("train_dense_only", False,
+                            "Whether or not to train the dense layer only.")
+tf.app.flags.DEFINE_boolean("augment_train_data", False,
+                            "Whether or not to augment the training data.")
+tf.app.flags.DEFINE_integer("epochs", 10,
+                            "Training runs for this number of epochs.")
+tf.app.flags.DEFINE_integer("batch_size", 32,
+                            "Number of training samples in one batch.")
+tf.app.flags.DEFINE_float("learning_rate", 1e-5,
+                          "Learning rate of the specified optimizer.")
+tf.app.flags.DEFINE_float("decay_rate", 5e-6,
+                          "Decay the learning rate by this value.")
+
+# Session specific directories, paths and files
 tf.app.flags.DEFINE_string("session_name", str(datetime.datetime.now()).
                            replace(" ", "_").replace(":", "-")[:-7],
                            "Session name of this training/eval/prediction run.")
-tf.app.flags.DEFINE_integer("log_level", tf.logging.INFO,
-                            "Verbosity of tensorflow and the script")
-tf.app.flags.DEFINE_string("dataset_dir", os.path.join(os.path.expanduser("~"),
-                                                       "recordings"),
-                           "Path to the dataset directory.")
-tf.app.flags.DEFINE_string("tb_dir", "/tmp/tb/",
-                           "Path to the tensorboard directory.")
-tf.app.flags.DEFINE_string("keras_model", None,
-                           "Path to keras model file.")
-tf.app.flags.DEFINE_integer("epochs", 10,
-                            "Training runs for this number of epochs.")
-tf.app.flags.DEFINE_integer("batch_size", 16,
-                            "Number of training samples in one batch.")
-tf.app.flags.DEFINE_integer("width", 224,
-                            "Width of the images that enter the network.")
-tf.app.flags.DEFINE_integer("height", 224,
-                            "Height of the images that enter the network.")
-tf.app.flags.DEFINE_string("feature_key", "imgPath",
-                           "The feature key that ")
+tf.app.flags.DEFINE_string("run_dir", "/tmp/tb",
+                           "Parent directory of the <session_name> folder.")
 tf.app.flags.DEFINE_string("save_file", "checkpoint.hdf5",
                            "Name of the file where the model and weights get saved.")
+
+# Dataset specific parameters
+tf.app.flags.DEFINE_string("data_dir", os.path.join(os.path.expanduser("~"), "recordings"),
+                           "Path to the dataset directory.")
 tf.app.flags.DEFINE_integer("split_ind", 6992,
                             "Index where the data set will be split into training and validation set.")
-tf.app.flags.DEFINE_float("learning_rate", 0.00001,
-                          "Learning rate of the specified optimizer.")
-tf.app.flags.DEFINE_string("restore_file", None,
-                           "Path to model file that should be restored. This overrides the keras_model flag.")
+
+# Tensorflow specific parameters
+tf.app.flags.DEFINE_integer("log_level", tf.logging.INFO,
+                            "Verbosity of tensorflow and the script")
+
+tf.app.flags
 FLAGS = tf.app.flags.FLAGS
 
 
 def main(argvs=None):
-    # Set the logging level of tensorflow
+    # Fixate the random seeds of numpy and Tensorflow is the first thing to do
+    np.random.seed(0)
+    tf.set_random_seed(0)
+
+    # Set the logging level of Tensorflow
     tf.logging.set_verbosity(FLAGS.log_level)
 
     # Define keras model as None initially
     model = None
+    preprocess_input_fn = None
 
     # Build the model depending on the set flags either from keras model definition in code
     # or restore the model from hdf5 file
-    if FLAGS.keras_model:
-        # Import the keras model file dynamically if specified or exit otherwise
-        keras_model_module = importlib.import_module("models.{}".format(FLAGS.keras_model))
-        model = keras_model_module.build_model(FLAGS)
-    elif FLAGS.restore_file and os.path.exists(FLAGS.restore_file):
-        # Restore the keras model from a restore file
-        model = tf.keras.models.load_model(FLAGS.restore_file)
-
-    if model is None:
-        tf.logging.error("Model creation failed, process is exiting now!")
-        tf.logging.error("Check the Flags: keras_model={}, restore_file={}".format(FLAGS.keras_model,
-                                                                                   FLAGS.restore_file))
+    if FLAGS.model_file and os.path.exists(os.path.join("models", "{}.py".format(FLAGS.model_file))):
+        # Import the model from a python module/code
+        module = importlib.import_module("models.{}".format(FLAGS.model_file))
+        model = module.build_model(FLAGS)
+        preprocess_input_fn = module.preprocess_input
+    elif FLAGS.model_file and os.path.exists(FLAGS.model_file):
+        # Restore the keras model from a hdf5 file
+        model = tf.keras.models.load_model(FLAGS.model_file)
+    else:
+        tf.logging.error("Model file '{}' does not exist!".format(FLAGS.model_file))
         exit(1)
 
-    # Fixate the random seeds of numpy and tensorflow
-    np.random.seed(0)
-    tf.set_random_seed(0)
-
     # Finalize the model by compiling it
-    model.compile(optimizer=tf.keras.optimizers.Adam(lr=FLAGS.learning_rate, decay=5e-6), loss='mean_absolute_error',
-                  metrics=['mse'])
+    model.compile(loss='mean_absolute_error', metrics=['mse'],
+                  optimizer=tf.keras.optimizers.Adam(lr=FLAGS.learning_rate, decay=5e-6))
 
     # Output for TensorBoard and model file will be inside FLAGS.tb_dir
-    save_dir = os.path.join(FLAGS.tb_dir, "{}_{}".format(model.name, FLAGS.session_name))
+    save_dir = os.path.join(FLAGS.run_dir, "{}_{}".format(model.name, FLAGS.session_name))
     save_file = os.path.join(save_dir, FLAGS.save_file)
 
     # Create a model specific directory where the weights are saved
@@ -96,10 +99,10 @@ def main(argvs=None):
                                                      save_weights_only=True, mode='auto', period=1)
 
     # The image batch generator that handles the image loading
-    train_gen = ImageBatchGenerator(FLAGS.dataset_dir, batch_size=FLAGS.batch_size, dim=(FLAGS.height, FLAGS.width),
-                                    end_ind=FLAGS.split_ind)
-    val_gen = ImageBatchGenerator(FLAGS.dataset_dir, batch_size=FLAGS.batch_size, dim=(FLAGS.height, FLAGS.width),
-                                  start_ind=FLAGS.split_ind)
+    train_gen = ImageBatchGenerator(FLAGS.data_dir, batch_size=FLAGS.batch_size, end_ind=FLAGS.split_ind,
+                                    preprocess_input_fn=preprocess_input_fn)
+    val_gen = ImageBatchGenerator(FLAGS.data_dir, batch_size=FLAGS.batch_size, start_ind=FLAGS.split_ind,
+                                  preprocess_input_fn=preprocess_input_fn)
 
     # Fit the model to the data by previously defined conditions (optimizer, loss ...)
     model.fit_generator(generator=train_gen, epochs=FLAGS.epochs, shuffle=True, workers=4,

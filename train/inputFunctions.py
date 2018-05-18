@@ -12,26 +12,29 @@ import tensorflow as tf
 from PIL import Image
 
 
-def getImgAndCommandList(recordingsFolder, printInfo = False):
+def getImgAndCommandList(recordingsFolder, printInfo=False, filter=None):
     cmdVelFiles = []
     imgsFolders = {}
     inputList = []
 
     for directory, dirnames, filenames in os.walk(recordingsFolder):
-        if directory == recordingsFolder:
+        if directory == recordingsFolder:  # Nur erster Durchlauf/Ebene
             for f in filenames:
                 fName, fExtension = os.path.splitext(f)
                 if fExtension == ".csv":
                     cmdVelFiles.append(fName)
-        else:
-            imgsFolders[directory] = filenames
+        else:  # Alle unersen Ebenen
+            if filenames:  # Nur wenn Dateien im Ordner
+                ibf = os.path.basename(os.path.normpath(directory))  # ibf=Imgage Base Folder
+                if not filter or filter == ibf:
+                    imgsFolders[directory] = filenames
 
     imgsFolders = collections.OrderedDict(sorted(imgsFolders.items()))
 
     for imgFolder, imgFiles in imgsFolders.items():
         imgFiles = sorted(imgFiles)
 
-        ibf = os.path.basename(os.path.normpath(imgFolder))  # ibf=ImgBaseFolde
+        ibf = os.path.split(os.path.relpath(imgFolder, recordingsFolder))[0]
         csvFilePath = os.path.join(recordingsFolder, "cmd_vel_" + ibf + ".csv")
         if os.path.isfile(csvFilePath):
             cmdDir = getCmdDir(csvFilePath)
@@ -180,4 +183,4 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
-    res = getImgAndCommandList(recordingsFolder, printInfo=False)
+    res = getImgAndCommandList(recordingsFolder, printInfo=True)

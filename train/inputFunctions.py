@@ -112,14 +112,14 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
     def __init__(self, dataset_dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True,
-                 start_ind=None, end_ind=None, preprocess_input_fn=None):
+                 start_ind=None, end_ind=None, preprocess_input_fn=None, img_filter="left_rect"):
         """Initialization"""
         self.dim = dim
         self.batch_size = batch_size
         self.preprocess_input_fn=preprocess_input_fn
 
         # Create the data list from dataset directory
-        data_list = getImgAndCommandList(dataset_dir)
+        data_list = getImgAndCommandList(dataset_dir, filter=img_filter)
         assert data_list is not None, "No images and velocity commands where found!"
 
         self.labels = [sample["velYaw"] for sample in data_list

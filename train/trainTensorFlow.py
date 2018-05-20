@@ -36,6 +36,8 @@ tf.app.flags.DEFINE_string("data_dir", os.path.join(os.path.expanduser("~"), "re
                            "Path to the dataset directory.")
 tf.app.flags.DEFINE_integer("split_ind", 6992,
                             "Index where the data set will be split into training and validation set.")
+tf.app.flags.DEFINE_string("img_filter", "left_rect",
+                           "Choose which camera image is used as network input.")
 
 # Tensorflow specific parameters
 tf.app.flags.DEFINE_integer("log_level", tf.logging.INFO,
@@ -100,9 +102,9 @@ def main(argvs=None):
 
     # The image batch generator that handles the image loading
     train_gen = ImageBatchGenerator(FLAGS.data_dir, batch_size=FLAGS.batch_size, end_ind=FLAGS.split_ind,
-                                    preprocess_input_fn=preprocess_input_fn)
+                                    preprocess_input_fn=preprocess_input_fn, img_filter=FLAGS.img_filter)
     val_gen = ImageBatchGenerator(FLAGS.data_dir, batch_size=FLAGS.batch_size, start_ind=FLAGS.split_ind,
-                                  preprocess_input_fn=preprocess_input_fn)
+                                  preprocess_input_fn=preprocess_input_fn, img_filter=FLAGS.img_filter)
 
     # Fit the model to the data by previously defined conditions (optimizer, loss ...)
     model.fit_generator(generator=train_gen, epochs=FLAGS.epochs, shuffle=True, workers=4,

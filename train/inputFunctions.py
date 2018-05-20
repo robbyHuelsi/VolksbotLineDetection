@@ -13,6 +13,7 @@ from PIL import Image
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False, filter=None):
+    print("Collecting from: {} with filter {}".format(recordingsFolder, filter))
     cmdVelFiles = []
     imgsFolders = {}
     inputList = []

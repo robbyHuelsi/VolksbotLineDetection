@@ -101,9 +101,9 @@ def main(argvs=None):
                                                      save_weights_only=True, mode='auto', period=1)
 
     # The image batch generator that handles the image loading
-    train_gen = ImageBatchGenerator(FLAGS.data_dir, batch_size=FLAGS.batch_size, end_ind=FLAGS.split_ind,
+    train_gen = ImageBatchGenerator(os.path.join(FLAGS.data_dir, "train"), batch_size=FLAGS.batch_size,
                                     preprocess_input_fn=preprocess_input_fn, img_filter=FLAGS.img_filter)
-    val_gen = ImageBatchGenerator(FLAGS.data_dir, batch_size=FLAGS.batch_size, start_ind=FLAGS.split_ind,
+    val_gen = ImageBatchGenerator(os.path.join(FLAGS.data_dir, "val"), batch_size=FLAGS.batch_size,
                                   preprocess_input_fn=preprocess_input_fn, img_filter=FLAGS.img_filter)
 
     # Fit the model to the data by previously defined conditions (optimizer, loss ...)

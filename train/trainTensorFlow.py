@@ -14,18 +14,18 @@ tf.app.flags.DEFINE_boolean("train_dense_only", False,
 tf.app.flags.DEFINE_boolean("augment_train_data", False,
                             "Whether or not to augment the training data.")
 tf.app.flags.DEFINE_integer("epochs", 10,
-                            "Training runs for this number of epochs.")
+                            "Repeat the training over all samples the number of epochs.")
 tf.app.flags.DEFINE_integer("batch_size", 32,
                             "Number of training samples in one batch.")
 tf.app.flags.DEFINE_float("learning_rate", 1e-5,
                           "Learning rate of the specified optimizer.")
 tf.app.flags.DEFINE_float("decay_rate", 5e-6,
-                          "Decay the learning rate by this value.")
+                          "Decay the learning rate by this value after one epoch.")
 
 # Session specific directories, paths and files
 tf.app.flags.DEFINE_string("session_name", str(datetime.datetime.now()).
                            replace(" ", "_").replace(":", "-")[:-7],
-                           "Session name of this training/eval/prediction run.")
+                           "Session name of this training and validation run.")
 tf.app.flags.DEFINE_string("run_dir", "/tmp/tb",
                            "Parent directory of the <session_name> folder.")
 tf.app.flags.DEFINE_string("save_file", "checkpoint.hdf5",
@@ -34,6 +34,7 @@ tf.app.flags.DEFINE_string("save_file", "checkpoint.hdf5",
 # Dataset specific parameters
 tf.app.flags.DEFINE_string("data_dir", os.path.join(os.path.expanduser("~"), "recordings"),
                            "Path to the dataset directory.")
+# TODO Remove, in my opinion this dataset splitting is a bad idea
 tf.app.flags.DEFINE_integer("split_ind", 6992,
                             "Index where the data set will be split into training and validation set.")
 tf.app.flags.DEFINE_string("img_filter", "left_rect",
@@ -41,7 +42,7 @@ tf.app.flags.DEFINE_string("img_filter", "left_rect",
 
 # Tensorflow specific parameters
 tf.app.flags.DEFINE_integer("log_level", tf.logging.INFO,
-                            "Verbosity of tensorflow and the script")
+                            "Verbosity of tensorflow and the script.")
 
 tf.app.flags
 FLAGS = tf.app.flags.FLAGS
@@ -59,7 +60,7 @@ def main(argvs=None):
     model = None
     preprocess_input_fn = None
 
-    # Build the model depending on the set flags either from keras model definition in code
+    # Build the model depending on the flags either from keras model definition in code
     # or restore the model from hdf5 file
     if FLAGS.model_file and os.path.exists(os.path.join("models", "{}.py".format(FLAGS.model_file))):
         # Import the model from a python module/code

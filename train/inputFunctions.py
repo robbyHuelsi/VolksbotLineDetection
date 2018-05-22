@@ -27,6 +27,7 @@ def getImgAndCommandList(recordingsFolder, printInfo=False, filter=None):
         else:  # Alle unersen Ebenen
             if filenames:  # Nur wenn Dateien im Ordner
                 ibf = os.path.basename(os.path.normpath(directory))  # ibf=Imgage Base Folder
+                # print(ibf)
                 if not filter or filter == ibf:
                     imgsFolders[directory] = filenames
 
@@ -185,4 +186,4 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
-    res = getImgAndCommandList(recordingsFolder, printInfo=True)
+    res = getImgAndCommandList(recordingsFolder, printInfo=True, filter="left_rect")

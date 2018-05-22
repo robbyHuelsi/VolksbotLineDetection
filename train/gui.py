@@ -3,7 +3,7 @@ import json
 from tkinter import *
 from PIL import ImageTk, Image
 import time
-from threading import Thread
+import threading
 
 import inputFunctions
 
@@ -15,9 +15,8 @@ class ImgAndCmdWindow():
         self.window = Tk()
         self.window.title(str(self.imgAndCommandList[self.i]["imgPath"]))
 
-        self.player = self.Player(parent=self)
-        self.isPlaying = False
-
+        self.player = None
+        
         # self.inputbox.state("zoomed")
 
         imgFrame = Image.open(self.imgAndCommandList[self.i]["imgPath"])
@@ -88,26 +87,34 @@ class ImgAndCmdWindow():
         self.backward()
 
     def _bPlayPausedClicked(self):
-        if self.isPlaying:
-            self.isPlaying = False
-            self.player._stop()
-            self.bPlayStop.config(text="Play")
-        else:
-            self.isPlaying = True
+        if not self.player:
+            self.player = self.Player(parent=self)
             self.player.start()
             self.bPlayStop.config(text="Stop")
+        else:
+            if self.player.isAlive():
+                self.player.stop()
+            self.player = None
+            self.bPlayStop.config(text="Play")
 
-    class Player(Thread):
+    class Player(threading.Thread):
         def __init__(self, parent=None):
             self.parent = parent
             super(ImgAndCmdWindow.Player, self).__init__()
+            self._stop = threading.Event()
 
         def run(self):
-            self.parent.forward()
-            time.sleep(0.04)
-            self.run()
+            while not self.stopped():
+                self.parent.forward()
+                time.sleep(0.04)
+                self.run()
 
-
+        def stop(self):
+            self._stop.set()
+    
+        def stopped(self):
+            return self._stop.isSet()
+        
 
 '''
     def getInfo(self):
@@ -118,5 +125,5 @@ class ImgAndCmdWindow():
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
-    imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder)
+    imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder, filter="left_rect")
     app = ImgAndCmdWindow(imgAndCommandList)

@@ -27,15 +27,16 @@ img_dir_left = os.path.join(full_dir, runtime, "left")
 img_dir_right = os.path.join(full_dir, runtime, "right")
 img_dir_left_rect = os.path.join(full_dir, runtime, "left_rect")
 img_dir_right_rect = os.path.join(full_dir, runtime, "right_rect")
-#img_rate = 0.03
-#last_stamp = 0
+# img_rate = 0.03
+# last_stamp = 0
 cv_bridge = CvBridge()
+
 
 def img_callback(img_msg, subdir="", file_type="jpg"):
     global img_dir, last_stamp, img_rate
 
     # Do not always save an image
-    #if time.time() - last_stamp > img_rate:
+    # if time.time() - last_stamp > img_rate:
     #    last_stamp = time.time()
 
     if file_type == "png":
@@ -43,7 +44,7 @@ def img_callback(img_msg, subdir="", file_type="jpg"):
         cv2.imwrite(os.path.join(img_dir, subdir, '%s.png' % img_msg.header.stamp), cv2_img)
     elif file_type == "jpg":
         np_arr = np.fromstring(img_msg.data, np.uint8)
-    	encoded_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+        encoded_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         cv2.imwrite(os.path.join(img_dir, subdir, '%s.jpg' % img_msg.header.stamp), encoded_img)
 
 
@@ -53,8 +54,8 @@ def cmd_callback(cmd_msg):
     with open(os.path.join(full_dir, '%s.csv' % runtime), 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter=",")
         writer.writerow([time.time(),
-                        cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.linear.z,
-                        cmd_msg.angular.x, cmd_msg.angular.y, cmd_msg.angular.z])
+                         cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.linear.z,
+                         cmd_msg.angular.x, cmd_msg.angular.y, cmd_msg.angular.z])
 
 
 def recorder():

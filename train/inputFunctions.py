@@ -41,12 +41,12 @@ def getImgAndCommandList(recordingsFolder, printInfo=False, filter=None):
         if os.path.isfile(csvFilePath):
             cmdDir = getCmdDir(csvFilePath)
             countImgFiles = len(imgFiles)
-            for i in range(countImgFiles-1):  # ...until last but one
+            for i in range(countImgFiles - 1):  # ...until last but one
                 thisFileName, thisFileExt = os.path.splitext(imgFiles[i])
                 if thisFileExt == ".jpg":
                     nextFileName = ""
-                    if i+1 <= countImgFiles:
-                        for j in range(i+1, countImgFiles):
+                    if i + 1 <= countImgFiles:
+                        for j in range(i + 1, countImgFiles):
                             nextFN, nextFE = os.path.splitext(imgFiles[j])
                             if nextFE == ".jpg":
                                 nextFileName = nextFN
@@ -91,9 +91,9 @@ def getCmdDir(path):
     return cmdDir
 
 
-def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo = False):
-    startTimestamp = float(thisImgName)/1000000000
-    endTimestamp = float(nextImgName)/1000000000
+def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo=False):
+    startTimestamp = float(thisImgName) / 1000000000
+    endTimestamp = float(nextImgName) / 1000000000
     sumValX = 0
     sumValYaw = 0
     countCmds = 0
@@ -111,7 +111,8 @@ def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo = 
         avVelYaw = lastVelYaw if lastVelYaw else 0.0
 
     if printInfo:
-        print("Between ", str(startTimestamp), " and ", str(endTimestamp), "is 1 command:" if countCmds == 1 else " are " + str(countCmds) + " commands:")
+        print("Between ", str(startTimestamp), " and ", str(endTimestamp),
+              "is 1 command:" if countCmds == 1 else " are " + str(countCmds) + " commands:")
         print("av. velX:    ", str(avVelX))
         print("av. velYaw:  ", str(avVelYaw))
 
@@ -122,11 +123,13 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
     def __init__(self, dataset_dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True,
-                 start_ind=None, end_ind=None, preprocess_input_fn=None, img_filter="left_rect"):
+                 start_ind=None, end_ind=None, img_filter="left_rect",
+                 preprocess_input=None, preprocess_target=None):
         """Initialization"""
         self.dim = dim
         self.batch_size = batch_size
-        self.preprocess_input_fn=preprocess_input_fn
+        self.preprocess_input_fn = preprocess_input
+        self.preprocess_target_fn = preprocess_target
 
         # Create the data list from dataset directory
         data_list = getImgAndCommandList(dataset_dir, filter=img_filter)
@@ -157,6 +160,10 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
         # Select image paths and labels with these indexes
         img_paths_batch = [self.img_paths[k] for k in indexes]
         y_batch = [self.labels[k] for k in indexes]
+
+        # If the target value also has to be preprocessed then do it now
+        if self.preprocess_target_fn is not None:
+            y_batch = self.preprocess_target_fn(y_batch)
 
         # Loading the images via path batch
         x_batch = self.__data_generation(img_paths_batch)

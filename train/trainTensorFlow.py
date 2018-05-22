@@ -58,7 +58,6 @@ def main(argvs=None):
 
     # Define keras model as None initially
     model = None
-    preprocess_input_fn = None
 
     # Build the model depending on the flags either from keras model definition in code
     # or restore the model from hdf5 file
@@ -66,7 +65,6 @@ def main(argvs=None):
         # Import the model from a python module/code
         module = importlib.import_module("models.{}".format(FLAGS.model_file))
         model = module.build_model(FLAGS)
-        preprocess_input_fn = module.preprocess_input
     elif FLAGS.model_file and os.path.exists(FLAGS.model_file):
         # Restore the keras model from a hdf5 file
         model = tf.keras.models.load_model(FLAGS.model_file)
@@ -74,9 +72,11 @@ def main(argvs=None):
         tf.logging.error("Model file '{}' does not exist!".format(FLAGS.model_file))
         exit(1)
 
-    # Finalize the model by compiling it
-    model.compile(loss='mean_absolute_error', metrics=['mse'],
-                  optimizer=tf.keras.optimizers.Adam(lr=FLAGS.learning_rate, decay=5e-6))
+    # Try and get the pre- and postprocessing functions from the module
+    preprocess_input = module.preprocess_input if module and 'preprocess_input' in dir(module) else None
+    preprocess_target = module.preprocess_target if module and 'preprocess_target' in dir(module) else None
+    # TODO This is in fact only used for making predictions (not during training)
+    # postprocess_output = module.postprocess_output if module and 'postprocess_output' in dir(module) else None
 
     # Output for TensorBoard and model file will be inside FLAGS.tb_dir
     save_dir = os.path.join(FLAGS.run_dir, "{}_{}".format(model.name, FLAGS.session_name))
@@ -90,7 +90,8 @@ def main(argvs=None):
         tf.logging.info("Restoring weights from {}!".format(save_file))
         model.load_weights(save_file)
 
-    # Tensorboard callback
+    # TODO Remove useless Tensorboard callback and replace it with:
+    # https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
     tb_callback = tf.keras.callbacks.TensorBoard(log_dir=save_dir, batch_size=FLAGS.batch_size, write_graph=True,
                                                  histogram_freq=0,  # Setting this to 1 will produce a failure at
                                                                     # training procedure end
@@ -101,11 +102,15 @@ def main(argvs=None):
                                                      monitor='val_loss', verbose=1, save_best_only=False,
                                                      save_weights_only=True, mode='auto', period=1)
 
+    # TODO Think about adding early stopping callback here
+
     # The image batch generator that handles the image loading
     train_gen = ImageBatchGenerator(os.path.join(FLAGS.data_dir, "train"), batch_size=FLAGS.batch_size,
-                                    preprocess_input_fn=preprocess_input_fn, img_filter=FLAGS.img_filter)
+                                    preprocess_input=preprocess_input, preprocess_target=preprocess_target,
+                                    img_filter=FLAGS.img_filter)
     val_gen = ImageBatchGenerator(os.path.join(FLAGS.data_dir, "val"), batch_size=FLAGS.batch_size,
-                                  preprocess_input_fn=preprocess_input_fn, img_filter=FLAGS.img_filter)
+                                  preprocess_input=preprocess_input, preprocess_target=preprocess_target,
+                                  img_filter=FLAGS.img_filter)
 
     # Fit the model to the data by previously defined conditions (optimizer, loss ...)
     model.fit_generator(generator=train_gen, epochs=FLAGS.epochs, shuffle=True, workers=4,

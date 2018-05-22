@@ -15,63 +15,75 @@ class ImgAndCmdWindow():
         self.i = 0
         self.window = Tk()
         self.window.title(str(self.imgAndCommandList[self.i]["imgPath"]))
-
+        self._job = None  # Necessary for changing scale value by hand
         self.player = None
         
         # self.inputbox.state("zoomed")
+        
+        self.windowWidth = 1200
 
-        imgFrame = Image.open(self.imgAndCommandList[self.i]["imgPath"])
-        # imgFrame = imgFrame.resize((600, 600), Image.ANTIALIAS)
-        itkFrame = ImageTk.PhotoImage(imgFrame)
+        img = Image.open(self.imgAndCommandList[self.i]["imgPath"])
+        img = img.resize((self.windowWidth, int(img.size[1]/img.size[0]*self.windowWidth)), Image.ANTIALIAS)
+        itkFrame = ImageTk.PhotoImage(img)
         self.lImgFrame = Label(self.window, image=itkFrame)
         self.lImgFrame.grid(row=0, columnspan=3)
+        
+        self.scaleI = Scale(self.window, from_=0, to=len(self.imgAndCommandList), length=self.windowWidth, orient=HORIZONTAL, command=self.scaleIUpdated)
+        self.scaleI.grid(row=1, columnspan=3)
 
         lVelX = Label(self.window, text="Vel. X")
         self.eVelX = Entry(self.window)
         self.eVelX.insert(END, self.imgAndCommandList[self.i]["velX"])
-        lVelX.grid(row=1, column=0)
-        self.eVelX.grid(row=1, column=1)
+        lVelX.grid(row=2, column=0)
+        self.eVelX.grid(row=2, column=1)
         self.eVelX.focus_set()
         self.pbVelX = Progressbar(self.window, orient=HORIZONTAL,
                                       length=200, mode="determinate")
         self.pbVelX["maximum"] = 2
         self.pbVelX["value"] = 1
-        self.pbVelX.grid(row=1, column=2)
+        self.pbVelX.grid(row=2, column=2)
         
 
         lVelYaw = Label(self.window, text="Vel. Yaw")
         self.eVelYaw = Entry(self.window)
         self.eVelYaw.insert(END, self.imgAndCommandList[self.i]["velYaw"])
-        lVelYaw.grid(row=2, column=0)
-        self.eVelYaw.grid(row=2, column=1,)
+        lVelYaw.grid(row=3, column=0)
+        self.eVelYaw.grid(row=3, column=1,)
         self.pbVelYaw = Progressbar(self.window, orient=HORIZONTAL,
                                       length=200, mode="determinate")
         self.pbVelYaw["maximum"] = 2
         self.pbVelYaw["value"] = 1
-        self.pbVelYaw.grid(row=2, column=2)
+        self.pbVelYaw.grid(row=3, column=2)
 
         bBackward = Button(self.window, text="Backward",
                            width=10, command=self._bBackwardClicked)
-        bBackward.grid(row=3, column=0)
+        bBackward.grid(row=4, column=0)
 
         bForward = Button(self.window, text="Forward",
                           width=10, command=self._bForwardClicked)
-        bForward.grid(row=3, column=2)
+        bForward.grid(row=4, column=2)
 
         self.bPlayStop = Button(self.window, text="Play",
                           width=10, command=self._bPlayPausedClicked)
-        self.bPlayStop.grid(row=3, column=1)
+        self.bPlayStop.grid(row=4, column=1)
 
+
+        #self.window.protocol("WM_DELETE_WINDOW", self.onClosing())
         self.window.mainloop()
 
-    def updateView(self):
+    def updateView(self, i=-1):
+        if i > -1:
+            self.i = i
+            
         self.window.title(str(self.imgAndCommandList[self.i]["imgPath"]))
 
-        imgFrame = Image.open(self.imgAndCommandList[self.i]["imgPath"])
-        # imgFrame = imgFrame.resize((600, 600), Image.ANTIALIAS)
-        itkFrame = ImageTk.PhotoImage(imgFrame)
+        img = Image.open(self.imgAndCommandList[self.i]["imgPath"])
+        img = img.resize((self.windowWidth, int(img.size[1]/img.size[0]*self.windowWidth)), Image.ANTIALIAS)
+        itkFrame = ImageTk.PhotoImage(img)
         self.lImgFrame.configure(image=itkFrame)
         self.lImgFrame.image = itkFrame
+        
+        self.scaleI.set(self.i)
 
         self.eVelX.delete(0, END)
         self.eVelX.insert(END, self.imgAndCommandList[self.i]["velX"])
@@ -79,6 +91,15 @@ class ImgAndCmdWindow():
         self.eVelYaw.delete(0, END)
         self.eVelYaw.insert(END, self.imgAndCommandList[self.i]["velYaw"])
         self.pbVelYaw["value"] = self.imgAndCommandList[self.i]["velYaw"] +1
+        
+    def scaleIUpdated(self, event):
+        if self._job:
+            self.window.after_cancel(self._job)
+        self._job = self.window.after(500, self.updateIByScaleI)
+
+    def updateIByScaleI(self):
+        self._job = None
+        self.updateView(int(self.scaleI.get()))
 
     def forward(self):
         if self.i < len(self.imgAndCommandList)-1:
@@ -110,6 +131,11 @@ class ImgAndCmdWindow():
                 self.player.stop()
             self.player = None
             self.bPlayStop.config(text="Play")
+            
+    def onClosing(self):
+        #if self.player:
+        #    self.player.stop()
+        pass
 
     class Player(threading.Thread):
         def __init__(self, parent=None):
@@ -121,8 +147,7 @@ class ImgAndCmdWindow():
             while not self.stopped():
                 self.parent.forward()
                 time.sleep(0.04)
-                self.run()
-
+        
         def stop(self):
             self._stop.set()
     

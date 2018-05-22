@@ -53,9 +53,13 @@ def getImgAndCommandList(recordingsFolder, printInfo=False, filter=None):
                                 break
                     if nextFileName != "":
                         inputDir = {}
+                        lastVelX = inputList[-1]["velX"] if inputList else 0.0
+                        lastVelYaw = inputList[-1]["velYaw"] if inputList else 0.0
                         velX, velYaw = meanCmd(cmdDir,
                                                thisFileName,
                                                nextFileName,
+                                               lastVelX,
+                                               lastVelYaw,
                                                printInfo)
                         inputDir["imgPath"] = os.path.join(imgFolder,
                                                            thisFileName
@@ -87,7 +91,7 @@ def getCmdDir(path):
     return cmdDir
 
 
-def meanCmd(cmdDir, thisImgName, nextImgName, printInfo = False):
+def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo = False):
     startTimestamp = float(thisImgName)/1000000000
     endTimestamp = float(nextImgName)/1000000000
     sumValX = 0
@@ -99,8 +103,12 @@ def meanCmd(cmdDir, thisImgName, nextImgName, printInfo = False):
             sumValX += float(cmd["valX"])
             sumValYaw += float(cmd["valYaw"])
 
-    avVelX = sumValX / countCmds if countCmds > 0 else 0
-    avVelYaw = sumValYaw / countCmds if countCmds > 0 else 0
+    if countCmds > 0:
+        avVelX = sumValX / countCmds
+        avVelYaw = sumValYaw / countCmds
+    else:
+        avVelX = lastVelX if lastVelX else 0.0
+        avVelYaw = lastVelYaw if lastVelYaw else 0.0
 
     if printInfo:
         print("Between ", str(startTimestamp), " and ", str(endTimestamp), "is 1 command:" if countCmds == 1 else " are " + str(countCmds) + " commands:")

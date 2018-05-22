@@ -1,6 +1,7 @@
 import os
 import json
 from tkinter import *
+from tkinter.ttk import *
 from PIL import ImageTk, Image
 import time
 import threading
@@ -28,15 +29,26 @@ class ImgAndCmdWindow():
         lVelX = Label(self.window, text="Vel. X")
         self.eVelX = Entry(self.window)
         self.eVelX.insert(END, self.imgAndCommandList[self.i]["velX"])
-        lVelX.grid(row=1, sticky="e")
-        self.eVelX.grid(row=1, column=1, columnspan=2)
+        lVelX.grid(row=1, column=0)
+        self.eVelX.grid(row=1, column=1)
         self.eVelX.focus_set()
+        self.pbVelX = Progressbar(self.window, orient=HORIZONTAL,
+                                      length=200, mode="determinate")
+        self.pbVelX["maximum"] = 2
+        self.pbVelX["value"] = 1
+        self.pbVelX.grid(row=1, column=2)
+        
 
         lVelYaw = Label(self.window, text="Vel. Yaw")
         self.eVelYaw = Entry(self.window)
         self.eVelYaw.insert(END, self.imgAndCommandList[self.i]["velYaw"])
-        lVelYaw.grid(row=2, sticky="e")
-        self.eVelYaw.grid(row=2, column=1, columnspan=2)
+        lVelYaw.grid(row=2, column=0)
+        self.eVelYaw.grid(row=2, column=1,)
+        self.pbVelYaw = Progressbar(self.window, orient=HORIZONTAL,
+                                      length=200, mode="determinate")
+        self.pbVelYaw["maximum"] = 2
+        self.pbVelYaw["value"] = 1
+        self.pbVelYaw.grid(row=2, column=2)
 
         bBackward = Button(self.window, text="Backward",
                            width=10, command=self._bBackwardClicked)
@@ -63,8 +75,10 @@ class ImgAndCmdWindow():
 
         self.eVelX.delete(0, END)
         self.eVelX.insert(END, self.imgAndCommandList[self.i]["velX"])
+        self.pbVelX["value"] = self.imgAndCommandList[self.i]["velX"] +1
         self.eVelYaw.delete(0, END)
         self.eVelYaw.insert(END, self.imgAndCommandList[self.i]["velYaw"])
+        self.pbVelYaw["value"] = self.imgAndCommandList[self.i]["velYaw"] +1
 
     def forward(self):
         if self.i < len(self.imgAndCommandList)-1:

@@ -27,9 +27,9 @@ class ImgAndCmdWindow():
         self.scaleI = Scale(self.window, from_=0, to=len(self.imgAndCommandList), length=self.windowWidth, orient=HORIZONTAL, command=self.scaleIUpdated)
         self.scaleI.grid(row=1, columnspan=3)
 
-        lVelX = Label(self.window, text="Vel. X")
+        '''
+        Label(self.window, text="Vel. X").grid(row=2, column=0)
         self.eVelX = Entry(self.window)
-        lVelX.grid(row=2, column=0)
         self.eVelX.grid(row=2, column=1)
         self.eVelX.focus_set()
         self.pbVelX = Progressbar(self.window, orient=HORIZONTAL,
@@ -37,26 +37,26 @@ class ImgAndCmdWindow():
         self.pbVelX["maximum"] = 2
         self.pbVelX.grid(row=2, column=2)
 
-        lVelYaw = Label(self.window, text="Vel. Yaw")
+        Label(self.window, text="Vel. Yaw").grid(row=3, column=0)
         self.eVelYaw = Entry(self.window)
-        lVelYaw.grid(row=3, column=0)
         self.eVelYaw.grid(row=3, column=1,)
         self.pbVelYaw = Progressbar(self.window, orient=HORIZONTAL,
                                       length=200, mode="determinate")
         self.pbVelYaw["maximum"] = 2
         self.pbVelYaw.grid(row=3, column=2)
+        '''
 
         bBackward = Button(self.window, text="Backward",
                            width=10, command=self._bBackwardClicked)
-        bBackward.grid(row=4, column=0)
+        bBackward.grid(row=3, column=0)
 
         bForward = Button(self.window, text="Forward",
                           width=10, command=self._bForwardClicked)
-        bForward.grid(row=4, column=2)
+        bForward.grid(row=3, column=2)
 
         self.bPlayStop = Button(self.window, text="Play",
                                 width=10, command=self._bPlayPausedClicked)
-        self.bPlayStop.grid(row=4, column=1)
+        self.bPlayStop.grid(row=3, column=1)
 
         self.cmdWindow = ImgAndCmdWindow.CmdWindow(Toplevel(self.window))
 
@@ -82,12 +82,14 @@ class ImgAndCmdWindow():
 
         self.scaleI.set(self.i)
 
+        '''
         self.eVelX.delete(0, END)
         self.eVelX.insert(END, trueVelX)
         self.pbVelX["value"] = trueVelX + 1
         self.eVelYaw.delete(0, END)
         self.eVelYaw.insert(END, trueVelYaw)
         self.pbVelYaw["value"] = trueVelYaw + 1
+        '''
 
         self.cmdWindow.updateView(trueVelX, trueVelYaw, 0, 0)
 
@@ -165,56 +167,82 @@ class ImgAndCmdWindow():
                                              style="truePos.Vertical.TProgressbar")
             self.pbTrueVelXPos["maximum"] = 1
             self.pbTrueVelXPos["value"] = 0
-            self.pbTrueVelXPos.grid(row=0, column=1)
+            self.pbTrueVelXPos.grid(row=1, column=4, rowspan=3)
 
             self.pbPredVelXPos = Progressbar(self.frame, orient=VERTICAL,
                                              length=200, mode="determinate",
                                              style="predPos.Vertical.TProgressbar")
             self.pbPredVelXPos["maximum"] = 1
             self.pbPredVelXPos["value"] = 0
-            self.pbPredVelXPos.grid(row=0, column=2)
+            self.pbPredVelXPos.grid(row=1, column=5, rowspan=3)
 
             self.pbTrueVelYawNeg = Progressbar(self.frame, orient=HORIZONTAL,
                                                length=200, mode="determinate",
                                                style="trueNeg.Horizontal.TProgressbar")
             self.pbTrueVelYawNeg["maximum"] = 1
             self.pbTrueVelYawNeg["value"] = 0
-            self.pbTrueVelYawNeg.grid(row=1, column=0)
+            self.pbTrueVelYawNeg.grid(row=4, column=1, columnspan=3)
 
             self.pbPredVelYawNeg = Progressbar(self.frame, orient=HORIZONTAL,
                                                length=200, mode="determinate",
                                                style="predNeg.Horizontal.TProgressbar")
             self.pbPredVelYawNeg["maximum"] = 1
             self.pbPredVelYawNeg["value"] = 0
-            self.pbPredVelYawNeg.grid(row=2, column=0)
+            self.pbPredVelYawNeg.grid(row=5, column=1, columnspan=3)
 
             self.pbTrueVelYawPos = Progressbar(self.frame, orient=HORIZONTAL,
                                                length=200, mode="determinate",
                                                style="truePos.Horizontal.TProgressbar")
             self.pbTrueVelYawPos["maximum"] = 1
             self.pbTrueVelYawPos["value"] = 0
-            self.pbTrueVelYawPos.grid(row=1, column=3)
+            self.pbTrueVelYawPos.grid(row=4, column=6, columnspan=3)
 
             self.pbPredVelYawPos = Progressbar(self.frame, orient=HORIZONTAL,
                                                length=200, mode="determinate",
                                                style="predPos.Horizontal.TProgressbar")
             self.pbPredVelYawPos["maximum"] = 1
             self.pbPredVelYawPos["value"] = 0
-            self.pbPredVelYawPos.grid(row=2, column=3)
+            self.pbPredVelYawPos.grid(row=5, column=6, columnspan=3)
 
             self.pbTrueVelXNeg = Progressbar(self.frame, orient=VERTICAL,
                                              length=200, mode="determinate",
                                              style="trueNeg.Vertical.TProgressbar")
             self.pbTrueVelXNeg["maximum"] = 1
             self.pbTrueVelXNeg["value"] = 0
-            self.pbTrueVelXNeg.grid(row=3, column=1)
+            self.pbTrueVelXNeg.grid(row=6, column=4, rowspan=3)
 
             self.pbPredVelXNeg = Progressbar(self.frame, orient=VERTICAL,
                                              length=200, mode="determinate",
                                              style="predNeg.Vertical.TProgressbar")
             self.pbPredVelXNeg["maximum"] = 1
             self.pbPredVelXNeg["value"] = 0
-            self.pbPredVelXNeg.grid(row=3, column=2)
+            self.pbPredVelXNeg.grid(row=6, column=5, rowspan=3)
+
+            Label(self.frame, text="- v_X").grid(row=0, column=4, columnspan=2)
+            Label(self.frame, text="+ v_X").grid(row=9, column=4, columnspan=2)
+            Label(self.frame, text="+ v_Yaw").grid(row=4, column=0, rowspan=2)
+            Label(self.frame, text="- v_Yaw").grid(row=4, column=9, rowspan=2)
+
+            self.svTrueVelXPos = StringVar(value="TrueVelXPos")
+            self.svPredVelXPos = StringVar(value="PredVelXPos")
+            self.svTrueVelXNeg = StringVar(value="TrueVelXNeg")
+            self.svPredVelXNeg = StringVar(value="PredVelXNeg")
+            self.svTrueVelYawPos = StringVar(value="TrueVelYawPos")
+            self.svPredVelYawPos = StringVar(value="PredVelYawPos")
+            self.svTrueVelYawNeg = StringVar(value="TrueVelYawNeg")
+            self.svPredVelYawNeg = StringVar(value="PredVelYawNeg")
+
+            Label(self.frame, textvariable=self.svTrueVelXPos).grid(row=2, column=3)
+            Label(self.frame, textvariable=self.svPredVelXPos).grid(row=2, column=6)
+            Label(self.frame, textvariable=self.svTrueVelXNeg).grid(row=7, column=3)
+            Label(self.frame, textvariable=self.svPredVelXNeg).grid(row=7, column=6)
+            Label(self.frame, textvariable=self.svTrueVelYawPos).grid(row=3, column=7)
+            Label(self.frame, textvariable=self.svPredVelYawPos).grid(row=6, column=7)
+            Label(self.frame, textvariable=self.svTrueVelYawNeg).grid(row=3, column=2)
+            Label(self.frame, textvariable=self.svPredVelYawNeg).grid(row=6, column=2)
+
+            Label(self.frame, text="green = true data").grid(row=10, column=0, columnspan=5)
+            Label(self.frame, text="blue = predicted data").grid(row=10, column=6, columnspan=5)
 
             self.frame.pack()
 
@@ -227,6 +255,24 @@ class ImgAndCmdWindow():
             self.pbTrueVelYawNeg["value"] = 1.0 + trueVelYaw if trueVelYaw < 0.0 else 1
             self.pbPredVelYawPos["value"] = predVelYaw-predVelYa if predVelYaw > 0 else 0
             self.pbPredVelYawNeg["value"] = 1.0 + predVelYaw if predVelYaw < 0.0 else 1
+
+            trueVelXPosText = str(round(trueVelX*100)) + " %" if trueVelX > 0 else ""
+            trueVelXNegText = str(round(trueVelX*100)) + " %" if trueVelX < 0 else ""
+            trueVelYawPosText = str(round(trueVelYaw*100)) + " %" if trueVelYaw > 0 else ""
+            trueVelYawNegText = str(round(trueVelYaw*100)) + " %" if trueVelYaw <  0 else ""
+            predVelXPosText = str(round(predVelX*100)) + " %" if predVelX > 0 else ""
+            predVelXNegText = str(round(predVelX*100)) + " %" if predVelX < 0 else ""
+            predVelYawPosText = str(round(predVelYaw*100)) + " %" if predVelYaw > 0 else ""
+            predVelYawNegText = str(round(predVelYaw*100)) + " %" if predVelYaw < 0 else ""
+
+            self.svTrueVelXPos.set(trueVelXPosText)
+            self.svPredVelXPos.set(predVelXPosText)
+            self.svTrueVelXNeg.set(trueVelXNegText)
+            self.svPredVelXNeg.set(predVelXNegText)
+            self.svTrueVelYawPos.set(trueVelYawPosText)
+            self.svPredVelYawPos.set(predVelYawPosText)
+            self.svTrueVelYawNeg.set(trueVelYawNegText)
+            self.svPredVelYawNeg.set(predVelYawNegText)
 
             # print(self.pbTrueVelXNeg["value"])
             # print(self.pbTrueVelYawNeg["value"])

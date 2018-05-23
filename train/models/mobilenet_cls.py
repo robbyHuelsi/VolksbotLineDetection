@@ -6,10 +6,10 @@ from tensorflow.python.keras.applications import MobileNet
 from PIL import Image
 
 
-def build_model(flags):
+def build_model():
     input_shape = (224, 224, 3)
-    input_tensor = Input(input_shape, flags.batch_size)
-    num_classes = flags.classes if 'classes' in flags else 9
+    input_tensor = Input(input_shape)
+    num_classes = 9
 
     mobnet_basic = MobileNet(include_top=False, input_shape=input_shape, input_tensor=input_tensor)
 
@@ -59,9 +59,10 @@ def preprocess_target(target):
 
 def postprocess_output(output):
     cls = np.argmax(output, axis=1)
+    ctrl_values = [-0.875, -0.625, -0.375, -0.1255, 0, 0.1255, 0.375, 0.625, -0.875]
+    result = [ctrl_values[c] for c in cls]
 
-    # TODO Convert class number to control value!
-    pass
+    return result
 
 
 def getVelYawClas(avVelYaw, minYaw=-1, maxYaw=1, classes=9):

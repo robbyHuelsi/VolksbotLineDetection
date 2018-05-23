@@ -9,38 +9,35 @@ import cv2
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import tensorflow.contrib.layers as layers
+import argparse
 
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Twist
+from trainTensorFlow import build_model, restore_weights
+
+parser = argparse.ArgumentParser(description='Run neural network based line/lane following ROS node.')
+parser.add_argument("--x_vel", action="store", type=float, default=0.1)
+parser.add_argument("--model_file", action="store", type=str, default=None)
+parser.add_argument("--weight_file", action="store", type=str, default=None)
 
 
 class ANNLineFollower():
     def __init__(self):
         # Init ROS Node such that we can use other rospy functionality afterwards
         rospy.init_node('line_follower')
+        args = parser.parse_args(rospy.myargv(rospy.myargv()[1:]))
 
-        # Initialize Tensorflow session
-        self.sess = tf.Session()
+        # Check for necessary command line arguments
+        if args.model_file is None or args.weight_file is None:
+            raise ValueError("Absolute paths to 'model_file' and 'weight_file' are mandatory!")
+
+        # Set tensorflow specific settings
         tf.logging.set_verbosity(tf.logging.INFO)
-        tf.logging.info("TF Version %s loaded!" % str(tf.__version__))
+        tf.logging.info("Tensorflow version {} loaded!".format(tf.__version__))
 
-        self.model_dir = "~/models/"
-        self.load_ckpt()
-
-        # TODO Replace the following lines with checkpoint loading
-        image = tf.placeholder(tf.float32, [1, 480, 640, 3], 'image')
-        net = slim.conv2d(image, 10, [3, 3], stride=2, scope='conv1')
-        net = layers.flatten(net)
-        net = slim.fully_connected(net, 2, activation_fn=tf.tanh)
-        linear, angular = tf.split(net, 2, axis=1)
-        linear = tf.identity(linear, name='linear')
-        angular = tf.identity(angular, name='angular')
-        self.sess.run(tf.global_variables_initializer())
-
-        # Get output tensors by name
-        # TODO Adopt to the names according to the loaded checkpoint. How to do it?
-        self.linear = self.sess.graph.get_tensor_by_name('linear:0')
-        self.angular = self.sess.graph.get_tensor_by_name('angular:0')
+        # Initialize the keras model and helper from model_file and restore the weights
+        self.model, self.helper = build_model(args.model_file)
+        restore_weights(self.model, args.weight_file)
 
         # Initialize the ROS subscriber and publisher and go into loop afterwards
         self.sub = rospy.Subscriber('image', CompressedImage, self.img_callback, queue_size=1)
@@ -49,15 +46,6 @@ class ANNLineFollower():
 
         rospy.spin()
 
-    def load_ckpt(self):
-        self.meta_file = glob.glob(os.path.join(self.model_dir, "*.meta"))
-
-        if not self.meta_file:
-            tf.logging.warn("No .meta file found in %s" % self.model_dir)
-        else:
-            saver = tf.train.import_meta_graph(self.meta_file)
-            saver.restore(self.sess, self.model_dir)
-
     def img_callback(self, img_msg):
         # TODO Check: Image conversion from msg -> cv2 (BGR) -> np (RGB)
         np_arr = np.fromstring(img_msg.data, np.uint8)
@@ -65,7 +53,7 @@ class ANNLineFollower():
         np_img = np_img[:, :, ::-1]
 
         # Convert from [0, 255] range to [-1, +1] range
-        np_img = ((np_img / 255.0) - 0.5) * 2
+        #np_img = ((np_img / 255.0) - 0.5) * 2
 
         # Do the prediction of the linear and angular values
         linear_pred, angular_pred = self.sess.run([self.linear, self.angular],

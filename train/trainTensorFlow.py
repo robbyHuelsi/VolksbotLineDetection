@@ -40,9 +40,9 @@ parser.add_argument("--save_file", action="store", default="checkpoint.hdf5", ty
 parser.add_argument("--data_dir", action="store", default=os.path.join(
                     os.path.expanduser("~"), "recordings"), type=str,
                     help="Path to the dataset directory.")
-parser.add_argument("--train_dir", action="store", default="train", type="str",
+parser.add_argument("--train_dir", action="store", default="train", type=str,
                     help="Subdirectory in dataset directory for training images")
-parser.add_argument("--val_dir", action="store", default="val", type="str",
+parser.add_argument("--val_dir", action="store", default="val", type=str,
                     help="Subdirectory in dataset directory for validation images.")
 # TODO Remove, in my opinion this dataset splitting is a bad idea
 parser.add_argument("--split_ind", action="store", default=6992, type=int,
@@ -77,22 +77,24 @@ def build_model(model_file, args=None):
 
 
 def restore_weights(model, save_file):
-    # If the model directory and the save file already exist, try to recover already saved weights
-    tf.logging.info("Restoring weights from {}!".format(save_file))
-    model.load_weights(save_file)
+    if os.path.exists(save_file):
+        # If the model directory and the save file already exist, try to recover already saved weights
+        tf.logging.info("Restoring weights from {}!".format(save_file))
+        model.load_weights(save_file)
+    else:
+        raise ValueError("Save file {} does not exist!".format(save_file))
 
 
-def predict(model, helper, args=None, img_paths=None):
-    if args is None and img_paths is None:
-        raise ValueError("Either 'args' or 'img_paths' have to be supplied!")
+def predict(model, helper, img_paths=None, pred_gen=None):
+    if pred_gen is None and img_paths is None:
+        raise ValueError("Either 'pred_gen' or 'img_paths' have to be supplied!")
 
     if img_paths is None:
-        # pred_gen = ImageBatchGenerator(os.path.join(args.data_dir, "train"), batch_size=1)
-        # predictions = model.predict_generator()
-        raise NotImplementedError()
+        output = model.predict_generator(pred_gen, workers=4, use_multiprocessing=True, verbose=1)
     else:
-        output = model.predict(np.expand_dims(helper.preprocess_input(img_paths), axis=0))
-        predictions = helper.postprocess_output(output)
+        output = model.predict(np.expand_dims(helper.preprocess_input(img_paths), axis=0), verbose=1)
+
+    predictions = helper.postprocess_output(output)
 
     return predictions
 
@@ -133,8 +135,9 @@ def main(args):
     # Create a model specific directory where the weights are saved
     if not os.path.isdir(save_dir):
         os.makedirs(save_dir)
-    elif os.path.exists(save_file):
-        restore_weights(model, save_file)
+
+    # Restore the weights, existence of save_file is checked inside the function
+    restore_weights(model, save_file)
 
     # If the number of epochs is greater zero, training cycles are run
     if args.epochs > 0:
@@ -142,11 +145,11 @@ def main(args):
         train_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir), batch_size=args.batch_size,
                                         preprocess_input=helper.preprocess_input,
                                         preprocess_target=helper.preprocess_target,
-                                        img_filter=args.img_filter)
+                                        sub_dir=args.img_filter)
         val_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.val_dir), batch_size=args.batch_size,
                                       preprocess_input=helper.preprocess_input,
                                       preprocess_target=helper.preprocess_target,
-                                      img_filter=args.img_filter)
+                                      sub_dir=args.img_filter)
 
         # TODO Think about adding early stopping as callback here
         # TODO Add plotting callback https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
@@ -164,10 +167,15 @@ def main(args):
         model.save(save_file)
         tf.logging.info('Saved final model and weights to {}!'.format(save_file))
 
-    img_paths = glob.glob(os.path.join(args.data_dir, "*", "left_rect", "*.jpg"))
-    predictions = [predict(model, helper, args, img_paths=path) for path in img_paths]
+    # TODO Change later! Right now the predictions are made for all training images
+    pred_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir),
+                                   batch_size=args.batch_size,
+                                   preprocess_input=helper.preprocess_input,
+                                   preprocess_target=helper.preprocess_target,
+                                   sub_dir=args.img_filter)
 
-    save_predictions(img_paths, predictions, os.path.join(save_dir, "predictions.txt"))
+    predictions = predict(model, helper, pred_gen=pred_gen)
+    save_predictions(pred_gen.features, predictions, os.path.join(save_dir, "predictions.txt"))
 
 
 if __name__ == "__main__":

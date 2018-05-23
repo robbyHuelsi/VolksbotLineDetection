@@ -7,6 +7,7 @@ from __future__ import print_function
 import os
 import collections
 import csv
+import glob
 import numpy as np
 import tensorflow as tf
 from PIL import Image
@@ -122,53 +123,65 @@ def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo=Fa
 class ImageBatchGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
-    def __init__(self, dataset_dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True,
-                 start_ind=None, end_ind=None, img_filter="left_rect",
-                 preprocess_input=None, preprocess_target=None):
+    def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True,
+                 start_ind=None, end_ind=None, sub_dir="left_rect",
+                 preprocess_input=None, preprocess_target=None, labeled=True):
         """Initialization"""
+        self.dir = dir
         self.dim = dim
+        self.labeled = labeled
         self.batch_size = batch_size
         self.preprocess_input_fn = preprocess_input
         self.preprocess_target_fn = preprocess_target
+        self._labels = []
+        self._img_paths = []
 
-        # Create the data list from dataset directory
-        data_list = getImgAndCommandList(dataset_dir, filter=img_filter)
-        assert data_list is not None, "No images and velocity commands where found!"
+        if labeled:
+            data_list = getImgAndCommandList(dir, filter=sub_dir)
+        else:
+            # If no labels are needed, search for every image in the directory
+            data_list = [{"imgPath": p} for p in glob.glob(os.path.join(dir, "*", "*.jpg"))]
 
-        self.labels = [sample["velYaw"] for sample in data_list
-                       if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]
-        self.labels = self.labels[start_ind:end_ind]
-        self.img_paths = [sample["imgPath"] for sample in data_list
-                          if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]
-        self.img_paths = self.img_paths[start_ind:end_ind]
+        if data_list is None:
+            tf.logging.warning("No images found in {}!".format(dir))
+        else:
+            self._img_paths = [sample["imgPath"] for sample in data_list
+                               if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]
+            self._img_paths = self._img_paths[start_ind:end_ind]
+
+            if labeled:
+                self._labels = [sample["velYaw"] for sample in data_list
+                                if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]
+                self._labels = self._labels[start_ind:end_ind]
 
         self.n_channels = n_channels
         self.shuffle = shuffle
-        self.indexes = np.arange(len(self.img_paths))
+        self.indexes = np.arange(len(self._img_paths))
 
         self.on_epoch_end()
 
     def __len__(self):
         """ Denotes the number of batches per epoch """
-        return int(np.floor(len(self.img_paths) / self.batch_size))
+        return int(np.floor(len(self._img_paths) / self.batch_size))
 
     def __getitem__(self, index):
         """ Generate one batch of data """
         # Generate indexes of the batch
         indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
 
-        # Select image paths and labels with these indexes
-        img_paths_batch = [self.img_paths[k] for k in indexes]
-        y_batch = [self.labels[k] for k in indexes]
+        # Select image paths and labels with these indexes and load them
+        x_batch = self.__data_generation([self._img_paths[k] for k in indexes])
 
-        # If the target value also has to be preprocessed then do it now
-        if self.preprocess_target_fn is not None:
-            y_batch = self.preprocess_target_fn(y_batch)
+        if self.labeled:
+            y_batch = [self._labels[k] for k in indexes]
 
-        # Loading the images via path batch
-        x_batch = self.__data_generation(img_paths_batch)
+            # If the target value also has to be preprocessed then do it now
+            if self.preprocess_target_fn is not None:
+                y_batch = self.preprocess_target_fn(y_batch)
 
-        return x_batch, y_batch
+            return x_batch, y_batch
+        else:
+            return x_batch
 
     def on_epoch_end(self):
         """ Updates indexes after each epoch """
@@ -197,6 +210,14 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
                 x_batch[i, ] = self.__std_preprocess_input(img_path)
 
         return x_batch
+
+    @property
+    def labels(self):
+        return self._labels
+
+    @property
+    def features(self):
+        return self._img_paths
 
 
 if __name__ == "__main__":

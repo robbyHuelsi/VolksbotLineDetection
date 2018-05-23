@@ -1,4 +1,5 @@
 numpy
 tensorflow==1.8.0
-h5py==2.7.1
+h5py==2.8.0rc1
 Pillow
+matplotlib

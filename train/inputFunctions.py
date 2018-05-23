@@ -187,7 +187,7 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
     def __data_generation(self, img_paths_batch):
         """ Generates data containing batch_size samples """
         # Initialization
-        x_batch = np.empty((self.batch_size, *self.dim, self.n_channels))
+        x_batch = np.empty((self.batch_size, self.dim[0], self.dim[1], self.n_channels))
 
         # Generate data
         for i, img_path in enumerate(img_paths_batch):

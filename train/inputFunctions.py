@@ -13,8 +13,10 @@ import tensorflow as tf
 from PIL import Image
 
 
-def getImgAndCommandList(recordingsFolder, printInfo=False, filter=None):
-    print("Collecting from: {} with filter {}".format(recordingsFolder, filter))
+def getImgAndCommandList(recordingsFolder, printInfo=False,
+                         onlyUseSubfolder=None, filterZeros=False):
+    print("Collecting from: {}".format(recordingsFolder))
+    print("but only use subfolder: {}".format(onlyUseSubfolder))
     cmdVelFiles = []
     imgsFolders = {}
     inputList = []
@@ -29,7 +31,7 @@ def getImgAndCommandList(recordingsFolder, printInfo=False, filter=None):
             if filenames:  # Nur wenn Dateien im Ordner
                 ibf = os.path.basename(os.path.normpath(directory))  # ibf=Imgage Base Folder
                 # print(ibf)
-                if not filter or filter == ibf:
+                if not onlyUseSubfolder or onlyUseSubfolder == ibf:
                     imgsFolders[directory] = filenames
 
     imgsFolders = collections.OrderedDict(sorted(imgsFolders.items()))
@@ -54,20 +56,27 @@ def getImgAndCommandList(recordingsFolder, printInfo=False, filter=None):
                                 break
                     if nextFileName != "":
                         inputDir = {}
-                        lastVelX = inputList[-1]["velX"] if inputList else 0.0
-                        lastVelYaw = inputList[-1]["velYaw"] if inputList else 0.0
+
+                        if inputList and inputList[-1]["folderPath"] == imgFolder:
+                            lastVelX = inputList[-1]["velX"]
+                            lastVelYaw = inputList[-1]["velYaw"]
+                        else:
+                            lastVelX = 0.0
+                            lastVelYaw = 0.0
+
                         velX, velYaw = meanCmd(cmdDir,
                                                thisFileName,
                                                nextFileName,
                                                lastVelX,
                                                lastVelYaw,
                                                printInfo)
-                        inputDir["imgPath"] = os.path.join(imgFolder,
-                                                           thisFileName
-                                                           + thisFileExt)
-                        inputDir["velX"] = velX
-                        inputDir["velYaw"] = velYaw
-                        inputList.append(inputDir)
+                        if not filterZeros or (velX != 0 and velYaw != 0):
+                            inputDir["folderPath"] = imgFolder
+                            inputDir["fileName"] = thisFileName
+                            inputDir["fileExt"] = thisFileExt
+                            inputDir["velX"] = velX
+                            inputDir["velYaw"] = velYaw
+                            inputList.append(inputDir)
 
                         if printInfo:
                             print(inputDir)
@@ -120,6 +129,12 @@ def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo=Fa
     return avVelX, avVelYaw
 
 
+def getImgPathByImgAndCmdDict(imgAndCmdDict):
+    return os.path.join(imgAndCmdDict["folderPath"],
+                        imgAndCmdDict["fileName"]
+                        + imgAndCmdDict["fileExt"])
+
+
 class ImageBatchGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
@@ -137,7 +152,7 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
         self._img_paths = []
 
         if labeled:
-            data_list = getImgAndCommandList(dir, filter=sub_dir)
+            data_list = getImgAndCommandList(dir, onlyUseSubfolder=sub_dir)
         else:
             # If no labels are needed, search for every image in the directory
             data_list = [{"imgPath": p} for p in glob.glob(os.path.join(dir, "*", "*.jpg"))]
@@ -222,4 +237,5 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
-    res = getImgAndCommandList(recordingsFolder, printInfo=True, filter="left_rect")
+    res = getImgAndCommandList(recordingsFolder, printInfo=True,
+                               onlyUseSubfolder="left_rect", filterZeros=True)

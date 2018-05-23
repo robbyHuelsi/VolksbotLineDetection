@@ -14,7 +14,6 @@ class ImgAndCmdWindow():
         self.imgAndCommandList = imgAndCommandList
         self.i = 0
         self.window = Tk()
-        self.window.title(str(self.imgAndCommandList[self.i]["imgPath"]))
         self._job = None  # Necessary for changing scale value by hand
         self.player = None
 
@@ -22,10 +21,7 @@ class ImgAndCmdWindow():
 
         self.windowWidth = 1200
 
-        img = Image.open(self.imgAndCommandList[self.i]["imgPath"])
-        img = img.resize((self.windowWidth, int(img.size[1]/img.size[0]*self.windowWidth)), Image.ANTIALIAS)
-        itkFrame = ImageTk.PhotoImage(img)
-        self.lImgFrame = Label(self.window, image=itkFrame)
+        self.lImgFrame = Label(self.window)
         self.lImgFrame.grid(row=0, columnspan=3)
 
         self.scaleI = Scale(self.window, from_=0, to=len(self.imgAndCommandList), length=self.windowWidth, orient=HORIZONTAL, command=self.scaleIUpdated)
@@ -33,26 +29,21 @@ class ImgAndCmdWindow():
 
         lVelX = Label(self.window, text="Vel. X")
         self.eVelX = Entry(self.window)
-        self.eVelX.insert(END, self.imgAndCommandList[self.i]["velX"])
         lVelX.grid(row=2, column=0)
         self.eVelX.grid(row=2, column=1)
         self.eVelX.focus_set()
         self.pbVelX = Progressbar(self.window, orient=HORIZONTAL,
                                       length=200, mode="determinate")
         self.pbVelX["maximum"] = 2
-        self.pbVelX["value"] = 1
         self.pbVelX.grid(row=2, column=2)
-
 
         lVelYaw = Label(self.window, text="Vel. Yaw")
         self.eVelYaw = Entry(self.window)
-        self.eVelYaw.insert(END, self.imgAndCommandList[self.i]["velYaw"])
         lVelYaw.grid(row=3, column=0)
         self.eVelYaw.grid(row=3, column=1,)
         self.pbVelYaw = Progressbar(self.window, orient=HORIZONTAL,
                                       length=200, mode="determinate")
         self.pbVelYaw["maximum"] = 2
-        self.pbVelYaw["value"] = 1
         self.pbVelYaw.grid(row=3, column=2)
 
         bBackward = Button(self.window, text="Backward",
@@ -70,6 +61,7 @@ class ImgAndCmdWindow():
         self.cmdWindow = ImgAndCmdWindow.CmdWindow(Toplevel(self.window))
 
         # self.window.protocol("WM_DELETE_WINDOW", self.onClosing())
+        self.updateView()
         self.window.mainloop()
 
     def updateView(self, i=-1):
@@ -148,25 +140,25 @@ class ImgAndCmdWindow():
         def __init__(self, master):
             self.master = master
             self.frame = Frame(self.master)
-
+            bgColor = self.master.cget('bg')
             style = Style()
-            style.theme_use('clam')
+            style.theme_use('alt')
             style.configure("trueNeg.Horizontal.TProgressbar",
-                            troughcolor='green', background='gray')
+                            troughcolor='green', background=bgColor)
             style.configure("truePos.Horizontal.TProgressbar",
-                            troughcolor='gray', background='green')
+                            troughcolor=bgColor, background='green')
             style.configure("predNeg.Horizontal.TProgressbar",
-                            troughcolor='blue', background='gray')
+                            troughcolor='blue', background=bgColor)
             style.configure("predPos.Horizontal.TProgressbar",
-                            troughcolor='gray', background='blue')
+                            troughcolor=bgColor, background='blue')
             style.configure("trueNeg.Vertical.TProgressbar",
-                            troughcolor='green', background='gray')
+                            troughcolor='green', background=bgColor)
             style.configure("truePos.Vertical.TProgressbar",
-                            troughcolor='gray', background='green')
+                            troughcolor=bgColor, background='green')
             style.configure("predNeg.Vertical.TProgressbar",
-                            troughcolor='blue', background='gray')
+                            troughcolor='blue', background=bgColor)
             style.configure("predPos.Vertical.TProgressbar",
-                            troughcolor='gray', background='blue')
+                            troughcolor=bgColor, background='blue')
 
             self.pbTrueVelXPos = Progressbar(self.frame, orient=VERTICAL,
                                              length=200, mode="determinate",

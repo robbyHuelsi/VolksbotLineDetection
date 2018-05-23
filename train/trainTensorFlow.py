@@ -31,7 +31,7 @@ parser.add_argument("--decay_rate", action="store", default=5e-6, type=float,
 parser.add_argument("--session_name", action="store", default=str(datetime.datetime.now()).
                     replace(" ", "_").replace(":", "-")[:-7], type=str,
                     help="Session name of this training and validation run.")
-parser.add_argument("--run_dir", action="store", default="/tmp/tb", type=str,
+parser.add_argument("--run_dir", action="store", default="/tmp/run", type=str,
                     help="Parent directory of the <session_name> folder.")
 parser.add_argument("--save_file", action="store", default="checkpoint.hdf5", type=str,
                     help="Name of the file where the model and weights get saved.")
@@ -40,6 +40,10 @@ parser.add_argument("--save_file", action="store", default="checkpoint.hdf5", ty
 parser.add_argument("--data_dir", action="store", default=os.path.join(
                     os.path.expanduser("~"), "recordings"), type=str,
                     help="Path to the dataset directory.")
+parser.add_argument("--train_dir", action="store", default="train", type="str",
+                    help="Subdirectory in dataset directory for training images")
+parser.add_argument("--val_dir", action="store", default="val", type="str",
+                    help="Subdirectory in dataset directory for validation images.")
 # TODO Remove, in my opinion this dataset splitting is a bad idea
 parser.add_argument("--split_ind", action="store", default=6992, type=int,
                     help="Index where the data set will be split into training and "
@@ -94,9 +98,21 @@ def predict(model, helper, args=None, img_paths=None):
 
 
 def save_arguments(argument_file, args):
-    with open(argument_file, "w") as file:
+    with open(argument_file, "w") as fh:
         for arg in vars(args):
-            file.write("{}={}\n".format(arg, getattr(args, arg)))
+            fh.write("{}={}\n".format(arg, getattr(args, arg)))
+
+
+def save_predictions(img_paths, predictions, path):
+    assert len(img_paths) == len(predictions)
+
+    with open(path, "w") as fh:
+        for prediction, img_path in zip(predictions, img_paths):
+            path, file_name = os.path.split(img_path)
+            dirs = path.split(os.sep)
+            rel_path = os.path.join(dirs[-2], dirs[-1], file_name)
+
+            fh.write("{},{}\n".format(rel_path, prediction[0][0]))
 
 
 def main(args):
@@ -123,11 +139,11 @@ def main(args):
     # If the number of epochs is greater zero, training cycles are run
     if args.epochs > 0:
         # The image batch generator that handles the image loading
-        train_gen = ImageBatchGenerator(os.path.join(args.data_dir, "train"), batch_size=args.batch_size,
+        train_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir), batch_size=args.batch_size,
                                         preprocess_input=helper.preprocess_input,
                                         preprocess_target=helper.preprocess_target,
                                         img_filter=args.img_filter)
-        val_gen = ImageBatchGenerator(os.path.join(args.data_dir, "val"), batch_size=args.batch_size,
+        val_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.val_dir), batch_size=args.batch_size,
                                       preprocess_input=helper.preprocess_input,
                                       preprocess_target=helper.preprocess_target,
                                       img_filter=args.img_filter)
@@ -151,12 +167,7 @@ def main(args):
     img_paths = glob.glob(os.path.join(args.data_dir, "*", "left_rect", "*.jpg"))
     predictions = [predict(model, helper, args, img_paths=path) for path in img_paths]
 
-    assert len(predictions) == len(img_paths)
-
-    with open(os.path.join(save_dir, "predictions.txt"), "w") as file:
-        for pred, img_path in zip(predictions, img_paths):
-            file.write("{},{}\n".format(img_path, pred[0][0]))
-
+    save_predictions(img_paths, predictions, os.path.join(save_dir, "predictions.txt"))
 
 
 if __name__ == "__main__":

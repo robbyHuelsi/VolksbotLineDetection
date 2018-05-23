@@ -1,14 +1,8 @@
 #!/usr/bin/env python
 import rospy
-import os
-import glob
-# import sys
-# import time
 import numpy as np
 import cv2
 import tensorflow as tf
-import tensorflow.contrib.slim as slim
-import tensorflow.contrib.layers as layers
 import argparse
 
 from sensor_msgs.msg import CompressedImage

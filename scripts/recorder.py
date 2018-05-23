@@ -51,7 +51,7 @@ def img_callback(img_msg, subdir="", file_type="jpg"):
 def cmd_callback(cmd_msg):
     global full_dir, runtime
 
-    with open(os.path.join(full_dir, '%s.csv' % runtime), 'a') as csvfile:
+    with open(os.path.join(full_dir, 'cmd_vel_%s.csv' % runtime), 'a') as csvfile:
         writer = csv.writer(csvfile, delimiter=",")
         writer.writerow([time.time(),
                          cmd_msg.linear.x, cmd_msg.linear.y, cmd_msg.linear.z,

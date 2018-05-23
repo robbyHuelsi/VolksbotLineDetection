@@ -68,9 +68,10 @@ class ImgAndCmdWindow():
         if i > -1:
             self.i = i
 
-        imgPath = self.imgAndCommandList[self.i]["imgPath"]
-        trueVelX = self.imgAndCommandList[self.i]["velX"]
-        trueVelYaw = self.imgAndCommandList[self.i]["velYaw"]
+        thisImgAndCmdDict = self.imgAndCommandList[self.i]
+        imgPath = inputFunctions.getImgPathByImgAndCmdDict(thisImgAndCmdDict)
+        trueVelX = thisImgAndCmdDict["velX"]
+        trueVelYaw = thisImgAndCmdDict["velYaw"]
 
         self.window.title(str(imgPath))
 
@@ -304,5 +305,7 @@ class ImgAndCmdWindow():
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
-    imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder, filter="left_rect")
+    imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder,
+                                                            onlyUseSubfolder="left_rect",
+                                                            filterZeros=False)
     app = ImgAndCmdWindow(imgAndCommandList)

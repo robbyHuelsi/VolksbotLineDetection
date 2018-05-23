@@ -14,7 +14,8 @@ from PIL import Image
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
-                         onlyUseSubfolder=None, filterZeros=False):
+                         onlyUseSubfolder=None, filterZeros=False,
+                         predictionsFile=None):
     print("Collecting from: {}".format(recordingsFolder))
     print("but only use subfolder: {}".format(onlyUseSubfolder))
     cmdVelFiles = []

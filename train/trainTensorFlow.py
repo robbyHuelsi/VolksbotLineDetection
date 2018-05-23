@@ -5,6 +5,8 @@ import datetime
 import os
 import numpy as np
 import argparse
+import json
+
 from inputFunctions import ImageBatchGenerator
 
 
@@ -103,17 +105,27 @@ def save_arguments(argument_file, args):
             fh.write("{}={}\n".format(arg, getattr(args, arg)))
 
 
-def save_predictions(img_paths, predictions, path):
+def save_predictions(img_paths, predictions, jsonPath):
     assert len(img_paths) == len(predictions)
 
-    with open(path, "w") as fh:
-        for prediction, img_path in zip(predictions, img_paths):
-            path, file_name = os.path.split(img_path)
-            dirs = path.split(os.sep)
-            rel_path = os.path.join(dirs[-2], dirs[-1], file_name)
+    predictionsDictList = []
+    # with open(path, "w") as fh:
+    for prediction, img_path in zip(predictions, img_paths):
+        predictionsDict = {}
+        path, fileNameAndExt = os.path.split(img_path)
+        fileName, fileExt = os.path.splitext(fileNameAndExt)
+        dirs = path.split(os.sep)
+        rel_path = os.path.join(dirs[-2], dirs[-1])
+        predictionsDict["relFolderPath"] = rel_path
+        predictionsDict["fileName"] = fileName
+        predictionsDict["fileExt"] = fileExt
+        predictionsDict["predVelYaw"] = "testz" # float(prediction[0])
+        predictionsDictList.append(predictionsDict)
+        # fh.write("{},{}\n".format(rel_path, prediction[0][0]))
 
-            fh.write("{},{}\n".format(rel_path, prediction[0][0]))
-
+    if predictionsDictList:
+        with open(jsonPath, 'w') as fp:
+            json.dump(predictionsDictList, fp)
 
 def main(args):
     # Fixate the random seeds of numpy and Tensorflow is the first thing to do
@@ -167,13 +179,13 @@ def main(args):
 
     # TODO Change later! Right now the predictions are made for all training images
     pred_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir),
-                                   batch_size=args.batch_size,
+                                   batch_size=1,
                                    preprocess_input=helper.preprocess_input,
                                    preprocess_target=helper.preprocess_target,
                                    sub_dir=args.img_filter)
 
     predictions = predict(model, helper, pred_gen=pred_gen)
-    save_predictions(pred_gen.features, predictions, os.path.join(save_dir, "predictions.txt"))
+    save_predictions(pred_gen.features, predictions, os.path.join(save_dir, "predictions.json"))
 
 
 if __name__ == "__main__":

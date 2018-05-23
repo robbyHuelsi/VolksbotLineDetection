@@ -8,6 +8,8 @@ import argparse
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Twist
 from trainTensorFlow import build_model, restore_weights
+from skimage.transform import resize
+
 
 parser = argparse.ArgumentParser(description='Run neural network based line/lane following ROS node.')
 parser.add_argument("--x_vel", action="store", type=float, default=0.1)
@@ -48,8 +50,9 @@ class ANNLineFollower():
 
         # Convert from [0, 255] range to [-1, +1] range
         np_img = ((np_img / 255.0) - 0.5) * 2
-
-        output = self.model.predict(np_img)
+	cropped_img = np_img[380:1100, ]
+	resized_img = resize(cropped_img, (224, 224), anti_aliasing=True)
+        output = self.model.predict(np.extend_dim(resized_img, axis=0))
         prediction = self.helper.postprocess_output(output)
 
         # Create the Twist message and fill the respective fields

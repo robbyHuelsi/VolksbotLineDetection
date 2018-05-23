@@ -81,8 +81,6 @@ def restore_weights(model, save_file):
         # If the model directory and the save file already exist, try to recover already saved weights
         tf.logging.info("Restoring weights from {}!".format(save_file))
         model.load_weights(save_file)
-    else:
-        raise ValueError("Save file {} does not exist!".format(save_file))
 
 
 def predict(model, helper, img_paths=None, pred_gen=None):

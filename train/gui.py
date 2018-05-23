@@ -254,7 +254,7 @@ class ImgAndCmdWindow():
             self.pbPredVelXNeg["value"] = 1.0 + predVelX if predVelX < 0.0 else 1
             self.pbTrueVelYawPos["value"] = trueVelYaw if trueVelYaw > 0.0 else 0
             self.pbTrueVelYawNeg["value"] = 1.0 + trueVelYaw if trueVelYaw < 0.0 else 1
-            self.pbPredVelYawPos["value"] = predVelYaw-predVelYa if predVelYaw > 0 else 0
+            self.pbPredVelYawPos["value"] = predVelYaw if predVelYaw > 0 else 0
             self.pbPredVelYawNeg["value"] = 1.0 + predVelYaw if predVelYaw < 0.0 else 1
 
             trueVelXPosText = str(round(trueVelX*100)) + " %" if trueVelX > 0 else ""

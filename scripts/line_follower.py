@@ -25,10 +25,10 @@ class ANNLineFollower():
     def __init__(self):
         # Init ROS Node such that we can use other rospy functionality afterwards
         rospy.init_node('line_follower')
-        args = parser.parse_args(rospy.myargv(rospy.myargv()[1:]))
+        self.args = parser.parse_args(rospy.myargv(rospy.myargv()[1:]))
 
         # Check for necessary command line arguments
-        if args.model_file is None or args.weight_file is None:
+        if self.args.model_file is None or self.args.weight_file is None:
             raise ValueError("Absolute paths to 'model_file' and 'weight_file' are mandatory!")
 
         # Set tensorflow specific settings
@@ -36,8 +36,8 @@ class ANNLineFollower():
         tf.logging.info("Tensorflow version {} loaded!".format(tf.__version__))
 
         # Initialize the keras model and helper from model_file and restore the weights
-        self.model, self.helper = build_model(args.model_file)
-        restore_weights(self.model, args.weight_file)
+        self.model, self.helper = build_model(self.args.model_file)
+        restore_weights(self.model, self.args.weight_file)
 
         # Initialize the ROS subscriber and publisher and go into loop afterwards
         self.sub = rospy.Subscriber('image', CompressedImage, self.img_callback, queue_size=1)
@@ -53,18 +53,15 @@ class ANNLineFollower():
         np_img = np_img[:, :, ::-1]
 
         # Convert from [0, 255] range to [-1, +1] range
-        #np_img = ((np_img / 255.0) - 0.5) * 2
+        np_img = ((np_img / 255.0) - 0.5) * 2
 
-        # Do the prediction of the linear and angular values
-        linear_pred, angular_pred = self.sess.run([self.linear, self.angular],
-                                                  feed_dict={'image:0': np_img[np.newaxis, :]})
-
-        # TODO Depending on the activation function in the last layer we might need to clip those values!
+        output = self.model.predict(np_img)
+        prediction = self.helper.postprocess_output(output)
 
         # Create the Twist message and fill the respective fields
         cmd = Twist()
-        cmd.linear.x = linear_pred
-        cmd.angular.z = angular_pred
+        cmd.linear.x = self.args.x_vel
+        cmd.angular.z = prediction
 
         # Send the created message to the roscore
         self.pub.publish(cmd)

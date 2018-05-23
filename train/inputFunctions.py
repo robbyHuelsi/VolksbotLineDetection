@@ -152,7 +152,7 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
         self._img_paths = []
 
         if labeled:
-            data_list = getImgAndCommandList(dir, onlyUseSubfolder=sub_dir)
+            data_list = getImgAndCommandList(dir, onlyUseSubfolder=sub_dir, filterZeros=True)
         else:
             # If no labels are needed, search for every image in the directory
             data_list = [{"imgPath": p} for p in glob.glob(os.path.join(dir, "*", "*.jpg"))]
@@ -160,13 +160,11 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
         if data_list is None:
             tf.logging.warning("No images found in {}!".format(dir))
         else:
-            self._img_paths = [sample["imgPath"] for sample in data_list
-                               if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]
+            self._img_paths = [getImgPathByImgAndCmdDict(sample) for sample in data_list]
             self._img_paths = self._img_paths[start_ind:end_ind]
 
             if labeled:
-                self._labels = [sample["velYaw"] for sample in data_list
-                                if (sample["velYaw"], sample["velX"]) != (0.0, 0.0)]
+                self._labels = [sample["velYaw"] for sample in data_list]
                 self._labels = self._labels[start_ind:end_ind]
 
         self.n_channels = n_channels

@@ -1,4 +1,3 @@
-import glob
 import tensorflow as tf
 import importlib
 import datetime
@@ -50,7 +49,7 @@ parser.add_argument("--val_dir", action="store", default="val", type=str,
 parser.add_argument("--split_ind", action="store", default=6992, type=int,
                     help="Index where the data set will be split into training and "
                          "validation set.")
-parser.add_argument("--img_filter", action="store", default="left_rect", type=str,
+parser.add_argument("--sub_dir", action="store", default="left_rect", type=str,
                     help="Choose which camera image is used as network input.")
 
 # Tensorflow specific parameters
@@ -105,27 +104,26 @@ def save_arguments(argument_file, args):
             fh.write("{}={}\n".format(arg, getattr(args, arg)))
 
 
-def save_predictions(img_paths, predictions, jsonPath):
+def save_predictions(img_paths, predictions, json_path):
     assert len(img_paths) == len(predictions)
 
-    predictionsDictList = []
-    # with open(path, "w") as fh:
+    predictions_list = []
+
     for prediction, img_path in zip(predictions, img_paths):
-        predictionsDict = {}
-        path, fileNameAndExt = os.path.split(img_path)
-        fileName, fileExt = os.path.splitext(fileNameAndExt)
+        prediction_dict = {}
+        path, file_name_ext = os.path.split(img_path)
+        file_name, file_ext = os.path.splitext(file_name_ext)
         dirs = path.split(os.sep)
         rel_path = os.path.join(dirs[-2], dirs[-1])
-        predictionsDict["relFolderPath"] = rel_path
-        predictionsDict["fileName"] = fileName
-        predictionsDict["fileExt"] = fileExt
-        predictionsDict["predVelYaw"] = "testz" # float(prediction[0])
-        predictionsDictList.append(predictionsDict)
-        # fh.write("{},{}\n".format(rel_path, prediction[0][0]))
+        prediction_dict["relFolderPath"] = rel_path
+        prediction_dict["fileName"] = file_name
+        prediction_dict["fileExt"] = file_ext
+        prediction_dict["predVelYaw"] = "testz" # float(prediction[0])
+        predictions_list.append(prediction_dict)
 
-    if predictionsDictList:
-        with open(jsonPath, 'w') as fp:
-            json.dump(predictionsDictList, fp)
+    if predictions_list:
+        with open(json_path, 'w') as fp:
+            json.dump(predictions_list, fp)
 
 def main(args):
     # Fixate the random seeds of numpy and Tensorflow is the first thing to do
@@ -155,11 +153,11 @@ def main(args):
         train_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir), batch_size=args.batch_size,
                                         preprocess_input=helper.preprocess_input,
                                         preprocess_target=helper.preprocess_target,
-                                        sub_dir=args.img_filter)
+                                        sub_dir=args.sub_dir)
         val_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.val_dir), batch_size=args.batch_size,
                                       preprocess_input=helper.preprocess_input,
                                       preprocess_target=helper.preprocess_target,
-                                      sub_dir=args.img_filter)
+                                      sub_dir=args.sub_dir)
 
         # TODO Think about adding early stopping as callback here
         # TODO Add plotting callback https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
@@ -178,11 +176,10 @@ def main(args):
         tf.logging.info('Saved final model and weights to {}!'.format(save_file))
 
     # TODO Change later! Right now the predictions are made for all training images
-    pred_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir),
-                                   batch_size=1,
+    pred_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir), batch_size=1,
                                    preprocess_input=helper.preprocess_input,
                                    preprocess_target=helper.preprocess_target,
-                                   sub_dir=args.img_filter)
+                                   sub_dir=args.sub_dir, shuffle=False)
 
     predictions = predict(model, helper, pred_gen=pred_gen)
     save_predictions(pred_gen.features, predictions, os.path.join(save_dir, "predictions.json"))

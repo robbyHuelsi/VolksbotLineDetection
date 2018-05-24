@@ -1,9 +1,9 @@
 import abc
 
 
-class ModelAPI(object):
+class HelperAPI(object):
     @abc.abstractmethod
-    def build_model(self, args=None):
+    def build_model(self, args=None, for_training=True):
         pass
 
     @abc.abstractmethod

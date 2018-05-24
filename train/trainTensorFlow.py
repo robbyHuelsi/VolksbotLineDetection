@@ -59,14 +59,14 @@ parser.add_argument("--seed", action="store", default=0, type=int,
                     help="Set the random seed of numpy and tensorflow to this value.")
 
 
-def build_model(model_file, args=None):
+def build_model(model_file, args=None, for_training=True):
     # Build the model depending on the flags either from keras model definition in code
     # or restore the model from hdf5 file
-    if model_file and os.path.exists(os.path.join("models", "{}.py".format(model_file))):
+    if model_file:  #and os.path.exists(os.path.join("models", "{}.py".format(model_file))):
         # Import the model from a python module/code
-        module = importlib.import_module("models.{}".format(model_file))
+        module = importlib.import_module("{}.models.{}".format(__package__, model_file))
         helper = module.model_helper
-        model = helper.build_model(args)
+        model = helper.build_model(args, for_training)
     elif model_file and os.path.exists(model_file):
         # Restore the keras model from a hdf5 file
         helper = None
@@ -124,6 +124,7 @@ def save_predictions(img_paths, predictions, json_path):
     if predictions_list:
         with open(json_path, 'w') as fp:
             json.dump(predictions_list, fp)
+
 
 def main(args):
     # Fixate the random seeds of numpy and Tensorflow is the first thing to do

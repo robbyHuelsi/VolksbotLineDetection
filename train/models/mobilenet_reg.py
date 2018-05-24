@@ -5,17 +5,17 @@ from tensorflow.python.keras.layers import Input, Dense, Flatten
 from tensorflow.python.keras.applications import MobileNet
 from PIL import Image
 
-from models.model_api import ModelAPI
+from helper_api import HelperAPI
 
 
-class MobileNetReg(ModelAPI):
-    def build_model(self, args=None):
+class MobileNetReg(HelperAPI):
+    def build_model(self, args=None, for_training=True):
         input_shape = (224, 224, 3)
         input_tensor = Input(input_shape)
 
         mobnet_basic = MobileNet(include_top=False, input_shape=input_shape, input_tensor=input_tensor)
 
-        if args.train_dense_only:
+        if  for_training and args.train_dense_only:
             # Disable training for the convolutional layers
             for index, layer in enumerate(mobnet_basic.layers):
                 layer.trainable = False
@@ -34,8 +34,9 @@ class MobileNetReg(ModelAPI):
         mobnet_extended = Model(inputs=input_tensor, outputs=predictions, name='mobilenet_reg')
 
         # Finalize the model by compiling it
-        mobnet_extended.compile(loss='mean_absolute_error', metrics=['mse'],
-                                optimizer=tf.keras.optimizers.Adam(lr=args.learning_rate, decay=args.decay_rate))
+        if for_training:
+            mobnet_extended.compile(loss='mean_absolute_error', metrics=['mse'],
+                                    optimizer=tf.keras.optimizers.Adam(lr=args.learning_rate, decay=args.decay_rate))
 
         return mobnet_extended
 

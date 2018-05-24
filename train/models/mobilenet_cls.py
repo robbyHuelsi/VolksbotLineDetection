@@ -5,10 +5,10 @@ from tensorflow.python.keras.layers import Input, Dense, Flatten
 from tensorflow.python.keras.applications import MobileNet
 from PIL import Image
 
-from models.model_api import ModelAPI
+from helper_api import HelperAPI
 
 
-class MobileNetCls(ModelAPI):
+class MobileNetCls(HelperAPI):
     def preprocess_input(self, input):
         # Open, crop, resize and rescale the image
         img = Image.open(input)
@@ -32,14 +32,14 @@ class MobileNetCls(ModelAPI):
 
         return result
 
-    def build_model(self, args=None):
+    def build_model(self, args=None, for_training=True):
         input_shape = (224, 224, 3)
         input_tensor = Input(input_shape)
         num_classes = 9
 
         mobnet_basic = MobileNet(include_top=False, input_shape=input_shape, input_tensor=input_tensor)
 
-        if args.train_dense_only:
+        if for_training and args.train_dense_only:
             # Disable training for the convolutional layers
             for index, layer in enumerate(mobnet_basic.layers):
                 layer.trainable = False
@@ -59,8 +59,9 @@ class MobileNetCls(ModelAPI):
         mobnet_extended = Model(inputs=input_tensor, outputs=predictions, name='mobilenet_cls')
 
         # Finalize the model by compiling it
-        mobnet_extended.compile(loss='categorical_crossentropy', metrics=['accuracy'],
-                                optimizer=tf.keras.optimizers.Adam(lr=flags.learning_rate, decay=flags.decay_rate))
+        if for_training:
+            mobnet_extended.compile(loss='categorical_crossentropy', metrics=['accuracy'],
+                                    optimizer=tf.keras.optimizers.Adam(lr=flags.learning_rate, decay=flags.decay_rate))
 
         return mobnet_extended
 

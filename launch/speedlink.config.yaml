@@ -1,0 +1,10 @@
+axis_linear: 4 # right stick vertical
+scale_linear: 0.2
+scale_linear_turbo: 0.8
+
+axis_angular: 1 # right stick horizontal
+scale_angular: 1  
+
+enable_button: 6 # L2 / button7 shoulder button
+enable_turbo_button: 7 # R2 / button8 shoulder button
+  

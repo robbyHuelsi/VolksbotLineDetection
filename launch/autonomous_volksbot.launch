@@ -102,13 +102,14 @@
         </node>
     </group>
     
-	<arg name="x_vel" default="0.1" />
-	<arg name="model_file" />
-	<arg name="weight_file" />
-	<arg name="args_file" />
-	<arg name="show_time" default="false" />
+    <arg name="x_vel" default="0.1" />
+    <arg name="model_file" />
+    <arg name="weight_file" />
+    <arg name="args_file" default="" />
+    <arg name="show_time" default="false" />
     
-    <node name="img2twist_node" pkg="autonomous_driving" type="nn_predictor" respawn="true" output="screen">
+    <node name="img2twist_node" pkg="autonomous_driving" type="nn_predictor.py" respawn="true" output="screen">
+	<remap from="/image" to="/left/image_rect_color/compressed" />
     	<param name="x_vel" value="$(arg x_vel)"/>
     	<param name="model_file" value="$(arg model_file)"/>
     	<param name="weight_file" value="$(arg weight_file)"/>

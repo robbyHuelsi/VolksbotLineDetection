@@ -1,0 +1,30 @@
+<?xml version="1.0"?>
+<launch>
+    <arg name="x_vel" default="0.1" />i
+    <arg name="model_file" />
+    <arg name="weight_file" />
+    <arg name="args_file" default=""/>
+    <arg name="show_time" default="false" />
+
+    <node name="camera_node" pkg="usb_cam" type="usb_cam_node" respawn="true" output="log">
+	<param name="video_device" value="/dev/video0" />
+	<param name="image_width" value="1280" />
+	<param name="image_height" value="720" />
+	<param name="pixel_format" value="mjpeg" />
+        <param name="framerate" value="25" />
+        <param name="io_method" value="mmap" />
+    </node>
+    
+    <node name="img2twist_node" pkg="autonomous_driving" type="nn_predictor.py" respawn="true" output="screen">
+	<remap from="/image" to="/camera_node/image_raw/compressed" />
+	<param name="x_vel" type="double" value="$(arg x_vel)"/>
+    	<param name="model_file" type="str" value="$(arg model_file)"/>
+    	<param name="weight_file" type="str" value="$(arg weight_file)"/>
+    	<param name="args_file" type="str" value="$(arg args_file)"/>
+	<param name="show_time" type="bool" value="$(arg show_time)"/>
+    </node>
+
+    <node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node" respawn="false" output="screen">
+	<remap from="/turtle1/cmd_vel" to="/cmd_vel"/>
+    </node>
+</launch>

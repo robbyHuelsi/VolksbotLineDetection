@@ -27,12 +27,20 @@ class Image2TwistNode:
         # Strip away ROS specific arguments and parse the residual arguments
         self.args = parser.parse_args(rospy.myargv(rospy.myargv()[1:]))
 
+        # If the script is run from launch file, the args might be none. Ask the ros param server instead!
+        if self.args.model_file is None and self.args.weight_file is None:
+            self.args.model_file = rospy.get_param("~model_file")
+            self.args.weight_file = rospy.get_param("~weight_file")
+            self.args.x_vel = rospy.get_param("~x_vel")
+            self.args.args_file = rospy.get_param("~args_file")
+            self.args.show_time = rospy.get_param("~show_time")
+
         # Check if necessary command line arguments are present
         if self.args.model_file is None or self.args.weight_file is None:
-            raise ValueError("Absolute paths to 'model_file' and 'weight_file' are mandatory!")
+            raise ValueError("Name of 'model_file' and absolute path to 'weight_file' are mandatory!")
 
         # Set and get Tensorflow specific settings
-        tf.logging.set_verbosity(tf.logging.WARN)
+        tf.logging.set_verbosity(tf.logging.INFO)
         rospy.loginfo("Tensorflow version {} loaded!".format(tf.__version__))
 
         # Initialize the Keras model and helper from model_file and restore the weights
@@ -58,10 +66,10 @@ class Image2TwistNode:
         np_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         np_img = np_img[:, :, ::-1]
 
-        # Crop, resize and rescale pixel values from [0, 255] range to [-1, +1] range
-        cropped_img = np_img[380:1100, ]
+        # Crop, resize and rescale pixel values from [0, 1] range to [-1, +1] range
+        cropped_img = np_img[:, 380:1100, :]
         resized_img = resize(cropped_img, (224, 224))
-        rescaled_img = ((resized_img / 255.0) - 0.5) * 2
+        rescaled_img = (resized_img - 0.5) * 2
 
         if self.args.show_time:
             end = time.time()

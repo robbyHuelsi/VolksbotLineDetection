@@ -51,15 +51,24 @@ class Image2TwistNode:
         self.graph = tf.get_default_graph()
         self.graph.finalize()
 
+	self.max_nsecs_delay = 40e6
+
         # Initialize the ROS subscriber and publisher and go into loop afterwards
         self.sub = rospy.Subscriber('image', CompressedImage, self.img_callback, queue_size=1)
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
+	self.img_pub = rospy.Publisher('volksbot_image/compressed', CompressedImage)
         rospy.loginfo("Image2Twist predictor is ready!")
         rospy.spin()
 
     def img_callback(self, img_msg):
         if self.args.show_time:
             start = time.time()
+
+	# Discard images if they are too old
+	now_nsecs = rospy.Time.now().nsecs
+	#rospy.loginfo("{}".format((now_nsecs-img_msg.header.stamp.nsecs)>self.max_nsecs_delay))
+	if (now_nsecs - img_msg.header.stamp.nsecs) > self.max_nsecs_delay:
+		return
 
         # TODO Check: Image conversion from msg -> cv2 (BGR) -> np (RGB)
         np_arr = np.fromstring(img_msg.data, np.uint8)
@@ -89,6 +98,19 @@ class Image2TwistNode:
 
                 # Send the created message to the roscore
                 self.pub.publish(cmd)
+
+	        #msg = CompressedImage()
+	        #msg.header.stamp = rospy.Time.now()
+	        #msg.format = "jpeg" # "bgr8; jpeg compressed bgr8"
+		#resized_img = resized_img[:, :, ::-1]
+		
+		#cv2.imshow("img", resized_img)
+		#cv2.waitKey(0)
+
+	        #msg.data = np.array(cv2.imencode('.jpg', resized_img)[1]).tostring()
+	        # Publish new image
+	        #self.img_pub.publish(msg)
+
 
         if self.args.show_time:
             end = time.time()

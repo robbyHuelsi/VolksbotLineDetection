@@ -5,7 +5,7 @@ from tensorflow.python.keras.layers import Input, Dense, Flatten
 from tensorflow.python.keras.applications import MobileNet
 from PIL import Image
 
-from helper_api import HelperAPI
+from models.helper_api import HelperAPI
 
 
 class MobileNetCls(HelperAPI):

@@ -64,7 +64,11 @@ def build_model(model_file, args=None, for_training=True):
     # or restore the model from hdf5 file
     if model_file:  #and os.path.exists(os.path.join("models", "{}.py".format(model_file))):
         # Import the model from a python module/code
-        module = importlib.import_module("{}.models.{}".format(__package__, model_file))
+        if __package__ is None:
+            module = importlib.import_module("models.{}".format(model_file))
+        else:
+            module = importlib.import_module("{}.models.{}".format(__package__, model_file))
+
         helper = module.model_helper
         model = helper.build_model(args, for_training)
     elif model_file and os.path.exists(model_file):
@@ -154,11 +158,13 @@ def main(args):
         train_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir), batch_size=args.batch_size,
                                         preprocess_input=helper.preprocess_input,
                                         preprocess_target=helper.preprocess_target,
-                                        sub_dir=args.sub_dir)
+                                        sub_dir=args.sub_dir, end_ind=args.split_ind)
+        #print(len(train_gen))
+        #exit(0)
         val_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.val_dir), batch_size=args.batch_size,
                                       preprocess_input=helper.preprocess_input,
                                       preprocess_target=helper.preprocess_target,
-                                      sub_dir=args.sub_dir)
+                                      sub_dir=args.sub_dir, start_ind=args.split_ind)
 
         # TODO Think about adding early stopping as callback here
         # TODO Add plotting callback https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e

@@ -5,7 +5,7 @@ from tensorflow.python.keras.layers import Input, Dense, Flatten
 from tensorflow.python.keras.applications import MobileNet
 from PIL import Image
 
-from helper_api import HelperAPI
+from models.helper_api import HelperAPI
 
 
 class MobileNetReg(HelperAPI):
@@ -15,7 +15,7 @@ class MobileNetReg(HelperAPI):
 
         mobnet_basic = MobileNet(include_top=False, input_shape=input_shape, input_tensor=input_tensor)
 
-        if  for_training and args.train_dense_only:
+        if for_training and args.train_dense_only:
             # Disable training for the convolutional layers
             for index, layer in enumerate(mobnet_basic.layers):
                 layer.trainable = False

@@ -9,11 +9,12 @@ from models.helper_api import HelperAPI
 
 
 class MobileNetCls(HelperAPI):
-    def preprocess_input(self, input):
-        # Open, crop, resize and rescale the image
-        img = Image.open(input)
-        img = img.crop((380, 0, 1100, 720))
-        img = img.resize((224, 224), resample=Image.BILINEAR)
+    def preprocess_input(self, input, crop):
+			# Open, (crop,) resize and rescale the image
+			img = Image.open(input)
+			if crop:
+				img = img.crop((380, 0, 1100, 720))
+			img = img.resize((224, 224), resample=Image.BILINEAR)
 
         return tf.keras.applications.mobilenet.preprocess_input(np.float32(img))
 
@@ -27,7 +28,7 @@ class MobileNetCls(HelperAPI):
 
     def postprocess_output(self, output):
         cls = np.argmax(output, axis=1)
-        ctrl_values = [-0.875, -0.625, -0.375, -0.1255, 0, 0.1255, 0.375, 0.625, -0.875]
+        ctrl_values = [-0.75, -0.375, -0.175, -0.0505, 0, 0.0505, 0.175, 0.375, 0.75]
         result = [ctrl_values[c] for c in cls]
 
         return result
@@ -61,7 +62,7 @@ class MobileNetCls(HelperAPI):
         # Finalize the model by compiling it
         if for_training:
             mobnet_extended.compile(loss='categorical_crossentropy', metrics=['accuracy'],
-                                    optimizer=tf.keras.optimizers.Adam(lr=flags.learning_rate, decay=flags.decay_rate))
+                                    optimizer=tf.keras.optimizers.Adam(lr=args.learning_rate, decay=args.decay_rate))
 
         return mobnet_extended
 
@@ -70,15 +71,15 @@ def getVelYawClas(avVelYaw, minYaw=-1, maxYaw=1, classes=9):
     avVelYaw = np.clip(avVelYaw, minYaw, maxYaw)
 
     # TODO Is there a smarter way to do it?
-    if minYaw <= avVelYaw < 3 * minYaw / 4:        velYawClass = 0
-    if 3 * minYaw / 4 <= avVelYaw < minYaw / 2:    velYawClass = 1
-    if minYaw / 2 <= avVelYaw < minYaw / 4:        velYawClass = 2
-    if minYaw / 4 <= avVelYaw < -0.001:        velYawClass = 3
-    if -0.001 <= avVelYaw <= 0.001:            velYawClass = 4
-    if 0.001 < avVelYaw <= maxYaw / 4:        velYawClass = 5
-    if maxYaw / 4 < avVelYaw <= maxYaw / 2:        velYawClass = 6
-    if maxYaw / 2 < avVelYaw <= 3 * maxYaw / 4:    velYawClass = 7
-    if 3 * maxYaw / 4 < avVelYaw <= maxYaw:        velYawClass = 8
+    if minYaw <= avVelYaw < minYaw / 2:			velYawClass = 0
+    if minYaw / 2 <= avVelYaw < minYaw / 4:		velYawClass = 1
+    if minYaw / 4 <= avVelYaw < minYaw / 10:	velYawClass = 2
+    if minYaw / 10 <= avVelYaw < -0.001:		velYawClass = 3
+    if -0.001 <= avVelYaw <= 0.001:				velYawClass = 4
+    if 0.001 < avVelYaw <= maxYaw / 10:			velYawClass = 5
+    if maxYaw / 10 < avVelYaw <= maxYaw / 4:	velYawClass = 6
+    if maxYaw / 4 < avVelYaw <= maxYaw / 2:		velYawClass = 7
+    if maxYaw / 2 < avVelYaw <= maxYaw:			velYawClass = 8
 
     return velYawClass
 

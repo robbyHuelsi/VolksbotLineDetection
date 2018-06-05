@@ -41,16 +41,16 @@ parser.add_argument("--save_file", action="store", default="checkpoint.hdf5", ty
 parser.add_argument("--data_dir", action="store", default=os.path.join(
                     os.path.expanduser("~"), "recordings"), type=str,
                     help="Path to the dataset directory.")
-parser.add_argument("--train_dir", action="store", default="train", type=str,
-                    help="Subdirectory in dataset directory for training images")
-parser.add_argument("--val_dir", action="store", default="val", type=str,
-                    help="Subdirectory in dataset directory for validation images.")
-# TODO Remove, in my opinion this dataset splitting is a bad idea
-parser.add_argument("--split_ind", action="store", default=6992, type=int,
-                    help="Index where the data set will be split into training and "
-                         "validation set.")
+#parser.add_argument("--train_dir", action="store", default="train", type=str,
+#                    help="Subdirectory in dataset directory for training images")
+#parser.add_argument("--val_dir", action="store", default="val", type=str,
+#                    help="Subdirectory in dataset directory for validation images.")
+parser.add_argument("--take_or_skip", action="store", default=10, type=int,
+                    help="Take or skip value used for splitting the training set into train and test.")
 parser.add_argument("--sub_dir", action="store", default="left_rect", type=str,
                     help="Choose which camera image is used as network input.")
+parser.add_argument("--crop", action="store", default=True, type=bool,
+                    help="Crop and resize the image or just resize it.")
 
 # Tensorflow specific parameters
 parser.add_argument("--log_level", action="store", default=tf.logging.INFO, type=int,
@@ -123,9 +123,6 @@ def save_predictions(img_paths, predictions, json_path):
         prediction_dict["fileName"] = file_name
         prediction_dict["fileExt"] = file_ext
         prediction_dict["predVelYaw"] = float(prediction[0])
-        #print(prediction_dict["predVelYaw"])
-        #print(type(prediction_dict["predVelYaw"]))
-        #input()
         predictions_list.append(prediction_dict)
 
     if predictions_list:
@@ -158,16 +155,17 @@ def main(args):
     # If the number of epochs is greater zero, training cycles are run
     if args.epochs > 0:
         # The image batch generator that handles the image loading
-        train_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir), batch_size=args.batch_size,
+        train_gen = ImageBatchGenerator(args.data_dir, batch_size=args.batch_size, crop=args.crop,
                                         preprocess_input=helper.preprocess_input,
                                         preprocess_target=helper.preprocess_target,
-                                        sub_dir=args.sub_dir, end_ind=args.split_ind)
-        #print(len(train_gen))
-        #exit(0)
-        val_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.val_dir), batch_size=args.batch_size,
+                                        sub_dir=args.sub_dir, take_or_skip=(-1 * args.take_or_skip))
+        val_gen = ImageBatchGenerator(args.data_dir, batch_size=args.batch_size, crop=args.crop,
                                       preprocess_input=helper.preprocess_input,
                                       preprocess_target=helper.preprocess_target,
-                                      sub_dir=args.sub_dir, start_ind=args.split_ind)
+                                      sub_dir=args.sub_dir, take_or_skip=args.take_or_skip)
+
+        print(len(train_gen.labels) + len(val_gen.labels))
+        assert len(train_gen.labels) + len(val_gen.labels) == 4227
 
         # TODO Think about adding early stopping as callback here
         # TODO Add plotting callback https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
@@ -186,15 +184,13 @@ def main(args):
         tf.logging.info('Saved final model and weights to {}!'.format(save_file))
 
     # TODO Change later! Right now the predictions are made for all training images
-    pred_gen = ImageBatchGenerator(os.path.join(args.data_dir, args.train_dir), batch_size=1,
+    pred_gen = ImageBatchGenerator(args.data_dir, batch_size=1, crop=args.crop,
                                    preprocess_input=helper.preprocess_input,
                                    preprocess_target=helper.preprocess_target,
-                                   sub_dir=args.sub_dir, shuffle=False)
+                                   sub_dir=args.sub_dir, shuffle=False, take_or_skip=0)
 
     predictions = predict(model, helper, pred_gen=pred_gen)
-    save_predictions(pred_gen.features, predictions,
-                     os.path.join(os.path.expanduser("~"),
-                                  "volksbot", "predictions.json"))
+    save_predictions(pred_gen.features, predictions, os.path.join(save_dir, "predictions.json"))
 
 
 if __name__ == "__main__":

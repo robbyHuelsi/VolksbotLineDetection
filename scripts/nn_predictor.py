@@ -17,6 +17,7 @@ parser.add_argument("--model_file", action="store", type=str, default=None)
 parser.add_argument("--weight_file", action="store", type=str, default=None)
 parser.add_argument("--args_file", action="store", type=str, default=None)
 parser.add_argument("--show_time", action="store", type=bool, default=False)
+parser.add_argument("--crop", action="store", type=bool, default=True)
 
 
 class Image2TwistNode:
@@ -34,6 +35,7 @@ class Image2TwistNode:
             self.args.x_vel = rospy.get_param("~x_vel")
             self.args.args_file = rospy.get_param("~args_file")
             self.args.show_time = rospy.get_param("~show_time")
+            self.args.crop = rospy.get_param("~crop")
 
         # Check if necessary command line arguments are present
         if self.args.model_file is None or self.args.weight_file is None:
@@ -51,12 +53,12 @@ class Image2TwistNode:
         self.graph = tf.get_default_graph()
         self.graph.finalize()
 
-	self.max_nsecs_delay = 40e6
+        self.max_nsecs_delay = 40e6
 
         # Initialize the ROS subscriber and publisher and go into loop afterwards
         self.sub = rospy.Subscriber('image', CompressedImage, self.img_callback, queue_size=1)
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
-	self.img_pub = rospy.Publisher('volksbot_image/compressed', CompressedImage)
+        self.img_pub = rospy.Publisher('volksbot_image/compressed', CompressedImage)
         rospy.loginfo("Image2Twist predictor is ready!")
         rospy.spin()
 
@@ -64,11 +66,11 @@ class Image2TwistNode:
         if self.args.show_time:
             start = time.time()
 
-	# Discard images if they are too old
-	now_nsecs = rospy.Time.now().nsecs
-	#rospy.loginfo("{}".format((now_nsecs-img_msg.header.stamp.nsecs)>self.max_nsecs_delay))
-	if (now_nsecs - img_msg.header.stamp.nsecs) > self.max_nsecs_delay:
-		return
+        # Discard images if they are too old
+        now_nsecs = rospy.Time.now().nsecs
+        # rospy.loginfo("{}".format((now_nsecs-img_msg.header.stamp.nsecs)>self.max_nsecs_delay))
+        if (now_nsecs - img_msg.header.stamp.nsecs) > self.max_nsecs_delay:
+            return
 
         # TODO Check: Image conversion from msg -> cv2 (BGR) -> np (RGB)
         np_arr = np.fromstring(img_msg.data, np.uint8)
@@ -76,19 +78,21 @@ class Image2TwistNode:
         np_img = np_img[:, :, ::-1]
 
         # Crop, resize and rescale pixel values from [0, 1] range to [-1, +1] range
-        cropped_img = np_img[:, 380:1100, :]
-        resized_img = resize(cropped_img, (224, 224))
-        rescaled_img = (resized_img - 0.5) * 2
+        if self.args.crop:
+            np_img = np_img[:, 380:1100, :]
+
+        np_img = resize(np_img, (224, 224))
+        np_img = (np_img - 0.5) * 2
 
         if self.args.show_time:
             end = time.time()
-            rospy.loginfo("Prep took: {}".format(np.round(end-start, 4)))
+            rospy.loginfo("Prep took: {}".format(np.round(end - start, 4)))
             start = end
 
         # Run prediction for the current image
         with self.session.as_default():
             with self.graph.as_default():
-                output = self.model.predict(np.expand_dims(rescaled_img, axis=0))
+                output = self.model.predict(np.expand_dims(np_img, axis=0))
                 prediction = self.helper.postprocess_output(output)
 
                 # Create the Twist message and fill the respective fields
@@ -99,22 +103,21 @@ class Image2TwistNode:
                 # Send the created message to the roscore
                 self.pub.publish(cmd)
 
-	        #msg = CompressedImage()
-	        #msg.header.stamp = rospy.Time.now()
-	        #msg.format = "jpeg" # "bgr8; jpeg compressed bgr8"
-		#resized_img = resized_img[:, :, ::-1]
-		
-		#cv2.imshow("img", resized_img)
-		#cv2.waitKey(0)
+            # msg = CompressedImage()
+            # msg.header.stamp = rospy.Time.now()
+            # msg.format = "jpeg" # "bgr8; jpeg compressed bgr8"
+            # resized_img = resized_img[:, :, ::-1]
 
-	        #msg.data = np.array(cv2.imencode('.jpg', resized_img)[1]).tostring()
-	        # Publish new image
-	        #self.img_pub.publish(msg)
+            # cv2.imshow("img", resized_img)
+            # cv2.waitKey(0)
 
+            # msg.data = np.array(cv2.imencode('.jpg', resized_img)[1]).tostring()
+            # Publish new image
+            # self.img_pub.publish(msg)
 
         if self.args.show_time:
             end = time.time()
-            rospy.loginfo("Pred took: {}".format(np.round(end-start, 4)))
+            rospy.loginfo("Pred took: {}".format(np.round(end - start, 4)))
 
 
 if __name__ == '__main__':

@@ -40,11 +40,14 @@ class MobileNetReg(HelperAPI):
 
         return mobnet_extended
 
-    def preprocess_input(self, input):
+    def preprocess_input(self, input, crop=True):
         # Open, crop, resize and rescale the image
         img = Image.open(input)
-        img = img.crop((380, 0, 1100, 720))
-        img = img.resize((224, 224), resample=Image.BILINEAR)
+
+        if crop:
+            img = img.crop((380, 0, 1100, 720))
+
+        img = img.resize((224, 224), resample=Image.NEAREST)  # , resample=Image.BILINEAR)
 
         return tf.keras.applications.mobilenet.preprocess_input(np.float32(img))
 

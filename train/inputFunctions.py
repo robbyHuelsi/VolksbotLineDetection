@@ -1,8 +1,3 @@
-#  TODO Think about how the input_fn loads images and controls lazy and
-#  controlled way.
-#  Number of epochs is defined, number of iterations depends
-#  on the batch size and number of samples in the training set.
-
 from __future__ import print_function
 import os
 import collections
@@ -172,9 +167,8 @@ def addPredictionsToImgAndCommandList(imgAndCommandList,
 class ImageBatchGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
-    def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True,
-                 start_ind=None, end_ind=None, sub_dir="left_rect",
-                 preprocess_input=None, preprocess_target=None, labeled=True):
+    def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True, sub_dir="left_rect",
+                 preprocess_input=None, preprocess_target=None, labeled=True, crop=True, take_or_skip=0):
         """Initialization"""
         self.dir = dir
         self.dim = dim
@@ -184,6 +178,7 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
         self.preprocess_target_fn = preprocess_target
         self._labels = []
         self._img_paths = []
+        self.crop = crop
 
         if labeled:
             data_list = getImgAndCommandList(dir, onlyUseSubfolder=sub_dir, filterZeros=True)
@@ -195,11 +190,19 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
             tf.logging.warning("No images found in {}!".format(dir))
         else:
             self._img_paths = [getImgPathByImgAndCmdDict(sample) for sample in data_list]
-            self._img_paths = self._img_paths[start_ind:end_ind]
+
+            if take_or_skip > 0:
+                self._img_paths = self._img_paths[::take_or_skip]
+            elif take_or_skip < 0:
+                self._img_paths = [p for i, p in enumerate(self._img_paths) if i % abs(take_or_skip) != 0]
 
             if labeled:
                 self._labels = [sample["velYaw"] for sample in data_list]
-                self._labels = self._labels[start_ind:end_ind]
+
+                if take_or_skip > 0:
+                    self._labels = self._labels[::take_or_skip]
+                elif take_or_skip < 0:
+                    self._labels = [p for i, p in enumerate(self._labels) if i % abs(take_or_skip) != 0]
 
         self.n_channels = n_channels
         self.shuffle = shuffle
@@ -238,7 +241,10 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
     def __std_preprocess_input(self, path):
         # Open, crop, resize and rescale the image
         img = Image.open(path)
-        img = img.crop((380, 0, 1100, 720))
+
+        if self.crop:
+            img = img.crop((380, 0, 1100, 720))
+
         img = img.resize(self.dim, resample=Image.BILINEAR)
         nd_img = (np.float32(img) / 127.5) - 1.0
 
@@ -252,7 +258,7 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
         # Generate data
         for i, img_path in enumerate(img_paths_batch):
             if self.preprocess_input_fn:
-                x_batch[i, ] = self.preprocess_input_fn(img_path)
+                x_batch[i, ] = self.preprocess_input_fn(img_path, self.crop)
             else:
                 x_batch[i, ] = self.__std_preprocess_input(img_path)
 

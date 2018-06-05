@@ -11,6 +11,7 @@ import glob
 import numpy as np
 import tensorflow as tf
 from PIL import Image
+import json
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
@@ -136,6 +137,37 @@ def getImgPathByImgAndCmdDict(imgAndCmdDict):
                         + imgAndCmdDict["fileExt"])
 
 
+def addPredictionsToImgAndCommandList(imgAndCommandList,
+                                      predictionsJsonPath, printInfo=False):
+    with open(predictionsJsonPath) as f:
+        predictedCmdList = json.load(f)
+
+    if not predictedCmdList:
+        print("!!! Loading json file for predicted cmd's failed!")
+        print(predictionsJsonPath)
+    else:
+        for imgAndCmdDict in imgAndCommandList:
+            filteredPCL = [d for d in predictedCmdList if
+                           (d['fileName'] in imgAndCmdDict['fileName'] and
+                            d['fileExt'] in imgAndCmdDict['fileExt'])]
+            if len(filteredPCL) == 0:
+                print("!!! No predicted cmd for " +
+                      getImgPathByImgAndCmdDict(imgAndCmdDict))
+            elif len(filteredPCL) > 1:
+                print("!!! Multiple predicted cmd's for " +
+                      getImgPathByImgAndCmdDict(imgAndCmdDict) + ":")
+                for d in filteredPCL:
+                    print(d)
+            else:
+                if "predVelX" in filteredPCL[0]:
+                    imgAndCmdDict["predVelX"] = filteredPCL[0]["predVelX"]
+                if "predVelYaw" in filteredPCL[0]:
+                    imgAndCmdDict["predVelYaw"] = filteredPCL[0]["predVelYaw"]
+                if printInfo:
+                    print(imgAndCmdDict)
+    return imgAndCommandList
+
+
 class ImageBatchGenerator(tf.keras.utils.Sequence):
     """Generates data for Keras"""
 
@@ -235,6 +267,13 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
 
 
 if __name__ == "__main__":
-    recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
-    res = getImgAndCommandList(recordingsFolder, printInfo=True,
-                               onlyUseSubfolder="left_rect", filterZeros=True)
+    recordingsFolder = os.path.join(os.path.expanduser("~"),
+                                    "recordings_vs")
+    predictionsJsonPath = os.path.join(os.path.expanduser("~"),
+                                       "volksbot", "predictions.json")
+    imgAndCommandList = getImgAndCommandList(recordingsFolder,
+                                             onlyUseSubfolder="left_rect",
+                                             filterZeros=True)
+    imgAndCommandList = addPredictionsToImgAndCommandList(imgAndCommandList,
+                                                          predictionsJsonPath,
+                                                          printInfo=True)

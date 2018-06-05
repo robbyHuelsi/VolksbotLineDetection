@@ -1,5 +1,4 @@
 import os
-import json
 from tkinter import *
 from tkinter.ttk import *
 from PIL import ImageTk, Image
@@ -10,7 +9,7 @@ import inputFunctions
 
 # View and Controll
 class ImgAndCmdWindow():
-    def __init__(self, imgAndCommandList, predictedCmdList=None):
+    def __init__(self, imgAndCommandList):
         self.imgAndCommandList = imgAndCommandList
         self.i = 0
         self.window = Tk()
@@ -306,12 +305,11 @@ class ImgAndCmdWindow():
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "volksbot", "data", "train_lane")
-    predictionJson = os.path.join(os.path.expanduser("~"),
-                                  "volksbot", "predictions.json")
+    predictionsJsonPath = os.path.join(os.path.expanduser("~"),
+                                      "volksbot", "predictions.json")
     imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder,
                                                             onlyUseSubfolder="left_rect",
                                                             filterZeros=False)
-    with open(predictionJson) as f:
-        predictedCmdList = json.load(f)
+    imgAndCommandList = inputFunctions.addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath)
 
-    app = ImgAndCmdWindow(imgAndCommandList, predictedCmdList=predictedCmdList)
+    app = ImgAndCmdWindow(imgAndCommandList)

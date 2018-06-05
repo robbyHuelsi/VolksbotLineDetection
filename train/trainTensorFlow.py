@@ -122,7 +122,10 @@ def save_predictions(img_paths, predictions, json_path):
         prediction_dict["relFolderPath"] = rel_path
         prediction_dict["fileName"] = file_name
         prediction_dict["fileExt"] = file_ext
-        prediction_dict["predVelYaw"] = "testz" # float(prediction[0])
+        prediction_dict["predVelYaw"] = float(prediction[0])
+        #print(prediction_dict["predVelYaw"])
+        #print(type(prediction_dict["predVelYaw"]))
+        #input()
         predictions_list.append(prediction_dict)
 
     if predictions_list:
@@ -189,7 +192,9 @@ def main(args):
                                    sub_dir=args.sub_dir, shuffle=False)
 
     predictions = predict(model, helper, pred_gen=pred_gen)
-    save_predictions(pred_gen.features, predictions, os.path.join(save_dir, "predictions.json"))
+    save_predictions(pred_gen.features, predictions,
+                     os.path.join(os.path.expanduser("~"),
+                                  "volksbot", "predictions.json"))
 
 
 if __name__ == "__main__":

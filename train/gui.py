@@ -10,7 +10,7 @@ import inputFunctions
 
 # View and Controll
 class ImgAndCmdWindow():
-    def __init__(self, imgAndCommandList):
+    def __init__(self, imgAndCommandList, predictedCmdList=None):
         self.imgAndCommandList = imgAndCommandList
         self.i = 0
         self.window = Tk()
@@ -304,8 +304,14 @@ class ImgAndCmdWindow():
 
 
 if __name__ == "__main__":
-    recordingsFolder = os.path.join(os.path.expanduser("~"), "recordings")
+    recordingsFolder = os.path.join(os.path.expanduser("~"),
+                                    "volksbot", "data", "train_lane")
+    predictionJson = os.path.join(os.path.expanduser("~"),
+                                  "volksbot", "predictions.json")
     imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder,
                                                             onlyUseSubfolder="left_rect",
                                                             filterZeros=False)
-    app = ImgAndCmdWindow(imgAndCommandList)
+    with open(predictionJson) as f:
+        predictedCmdList = json.load(f)
+
+    app = ImgAndCmdWindow(imgAndCommandList, predictedCmdList=predictedCmdList)

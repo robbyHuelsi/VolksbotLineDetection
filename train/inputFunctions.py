@@ -72,7 +72,7 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
                                                lastVelX,
                                                lastVelYaw,
                                                printInfo)
-                        if not filterZeros or (velX != 0 and velYaw != 0):
+                        if not filterZeros or (velX != 0.0 or velYaw != 0.0):
                             inputDir["folderPath"] = imgFolder
                             inputDir["fileName"] = thisFileName
                             inputDir["fileExt"] = thisFileExt
@@ -103,7 +103,8 @@ def getCmdDir(path):
     return cmdDir
 
 
-def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo=False):
+def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw,
+            roundDecimal=3, printInfo=False):
     startTimestamp = float(thisImgName) / 1000000000
     endTimestamp = float(nextImgName) / 1000000000
     sumValX = 0
@@ -116,11 +117,11 @@ def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo=Fa
             sumValYaw += float(cmd["valYaw"])
 
     if countCmds > 0:
-        avVelX = sumValX / countCmds
-        avVelYaw = sumValYaw / countCmds
+        avVelX = round(sumValX / countCmds, roundDecimal)
+        avVelYaw = round(sumValYaw / countCmds, roundDecimal)
     else:
-        avVelX = lastVelX if lastVelX else 0.0
-        avVelYaw = lastVelYaw if lastVelYaw else 0.0
+        avVelX = round(lastVelX, roundDecimal) if lastVelX else 0.0
+        avVelYaw = round(lastVelYaw, roundDecimal) if lastVelYaw else 0.0
 
     if printInfo:
         print("Between ", str(startTimestamp), " and ", str(endTimestamp),

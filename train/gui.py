@@ -5,7 +5,7 @@ from PIL import ImageTk, Image
 import time
 import threading
 
-import inputFunctions
+import inputFunctions as ifu
 
 # View and Controll
 class ImgAndCmdWindow():
@@ -23,7 +23,10 @@ class ImgAndCmdWindow():
         self.lImgFrame = Label(self.window)
         self.lImgFrame.grid(row=0, columnspan=3)
 
-        self.scaleI = Scale(self.window, from_=0, to=len(self.imgAndCommandList), length=self.windowWidth, orient=HORIZONTAL, command=self.scaleIUpdated)
+        self.scaleI = Scale(self.window, from_=0,
+                            to=len(self.imgAndCommandList),
+                            length=self.windowWidth, orient=HORIZONTAL,
+                            command=self.scaleIUpdated)
         self.scaleI.grid(row=1, columnspan=3)
 
         '''
@@ -68,14 +71,24 @@ class ImgAndCmdWindow():
             self.i = i
 
         thisImgAndCmdDict = self.imgAndCommandList[self.i]
-        imgPath = inputFunctions.getImgPathByImgAndCmdDict(thisImgAndCmdDict)
+        imgPath = ifu.getImgPathByImgAndCmdDict(thisImgAndCmdDict)
         trueVelX = thisImgAndCmdDict["velX"]
         trueVelYaw = thisImgAndCmdDict["velYaw"]
+        if "predVelX" in thisImgAndCmdDict:
+            predVelX = thisImgAndCmdDict["predVelX"]
+        else:
+            predVelX = 0.0
+        if "predVelYaw" in thisImgAndCmdDict:
+            predVelYaw = thisImgAndCmdDict["predVelYaw"]
+        else:
+            predVelYaw = 0.0
 
         self.window.title(str(imgPath))
 
         img = Image.open(imgPath)
-        img = img.resize((self.windowWidth, int(img.size[1]/img.size[0]*self.windowWidth)), Image.ANTIALIAS)
+        img = img.resize((self.windowWidth,
+                          int(img.size[1]/img.size[0]*self.windowWidth)),
+                         Image.ANTIALIAS)
         itkFrame = ImageTk.PhotoImage(img)
         self.lImgFrame.configure(image=itkFrame)
         self.lImgFrame.image = itkFrame
@@ -91,7 +104,7 @@ class ImgAndCmdWindow():
         self.pbVelYaw["value"] = trueVelYaw + 1
         '''
 
-        self.cmdWindow.updateView(trueVelX, trueVelYaw, 0, 0)
+        self.cmdWindow.updateView(trueVelX, trueVelYaw, predVelX, predVelYaw)
 
     def scaleIUpdated(self, event):
         if self._job:
@@ -265,6 +278,8 @@ class ImgAndCmdWindow():
             predVelYawPosText = str(round(predVelYaw*100)) + " %" if predVelYaw > 0 else ""
             predVelYawNegText = str(round(predVelYaw*100)) + " %" if predVelYaw < 0 else ""
 
+            print(trueVelX)
+
             self.svTrueVelXPos.set(trueVelXPosText)
             self.svPredVelXPos.set(predVelXPosText)
             self.svTrueVelXNeg.set(trueVelXNegText)
@@ -303,13 +318,20 @@ class ImgAndCmdWindow():
 
 
 if __name__ == "__main__":
+    '''
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "volksbot", "data", "train_lane")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
                                       "volksbot", "predictions.json")
-    imgAndCommandList = inputFunctions.getImgAndCommandList(recordingsFolder,
-                                                            onlyUseSubfolder="left_rect",
-                                                            filterZeros=False)
-    imgAndCommandList = inputFunctions.addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath)
+    '''
+    recordingsFolder = os.path.join(os.path.expanduser("~"),
+                                    "recordings_vs")
+    predictionsJsonPath = os.path.join(os.path.expanduser("~"),
+                                       "volksbot", "predictions.json")
+    imgAndCmdList = ifu.getImgAndCommandList(recordingsFolder,
+                                             onlyUseSubfolder="left_rect",
+                                             filterZeros=True)
+    imgAndCmdList = ifu.addPredictionsToImgAndCommandList(imgAndCmdList,
+                                                          predictionsJsonPath)
 
-    app = ImgAndCmdWindow(imgAndCommandList)
+    app = ImgAndCmdWindow(imgAndCmdList)

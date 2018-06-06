@@ -193,7 +193,7 @@ def getSubfolderListOfImgAndCommandList(imgAndCmdList):
         thisPath = imgAndCmdDict["folderPath"]
         nextPath = imgAndCmdList[i+1]["folderPath"] if i < len(imgAndCmdList) - 1 else None
         if i == len(imgAndCmdList) - 1 or thisPath != nextPath:
-            # Letzes Element oder das nächste Element gehört schon zum nächsten Subfolder
+            # Letzes Element oder das naechste Element gehoert schon zum naechsten Subfolder
             subfolderDict = {}
             subfolderDict["folderPath"] = thisPath
             subfolderDict["startI"] = subfoldersList[-1]["stopI"] + 1 if len(subfoldersList) > 0 else 0

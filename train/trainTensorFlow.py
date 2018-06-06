@@ -7,6 +7,8 @@ import argparse
 
 from inputFunctions import ImageBatchGenerator
 from outputFunctions import save_arguments, save_predictions
+from keras.callbacks import ModelCheckpoint
+from keras.models import load_model
 
 parser = argparse.ArgumentParser(description='Train and predict on different models')
 
@@ -48,7 +50,7 @@ parser.add_argument("--take_or_skip", action="store", default=10, type=int,
                     help="Take or skip value used for splitting the training set into train and test.")
 parser.add_argument("--sub_dir", action="store", default="left_rect", type=str,
                     help="Choose which camera image is used as network input.")
-parser.add_argument("--crop", action="store", default=True, type=bool,
+parser.add_argument("--crop", action="store", default=0, type=int,
                     help="Crop and resize the image or just resize it.")
 
 # Tensorflow specific parameters
@@ -73,7 +75,7 @@ def build_model(model_file, args=None, for_training=True):
     elif model_file and os.path.exists(model_file):
         # Restore the keras model from a hdf5 file
         helper = None
-        model = tf.keras.models.load_model(model_file)
+        model = load_model(model_file)
     else:
         raise ValueError("Model file '{}' does not exist!".format(model_file))
 
@@ -92,7 +94,7 @@ def predict(model, helper, img_paths=None, pred_gen=None):
         raise ValueError("Either 'pred_gen' or 'img_paths' have to be supplied!")
 
     if img_paths is None:
-        output = model.predict_generator(pred_gen, workers=4, use_multiprocessing=True, verbose=1)
+        output = model.predict_generator(pred_gen, steps=len(pred_gen), workers=4, use_multiprocessing=True, verbose=1)
     else:
         output = model.predict(np.expand_dims(helper.preprocess_input(img_paths), axis=0), verbose=1)
 
@@ -105,6 +107,9 @@ def main(args):
     # Fixate the random seeds of numpy and Tensorflow is the first thing to do
     np.random.seed(args.seed)
     tf.set_random_seed(args.seed)
+
+    if args.crop:
+	exit(1)
 
     # Set the logging level of Tensorflow
     tf.logging.set_verbosity(args.log_level)
@@ -137,14 +142,14 @@ def main(args):
 
         # TODO Think about adding early stopping as callback here
         # TODO Add plotting callback https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
-        ms_callback = tf.keras.callbacks.ModelCheckpoint(
-            os.path.join(save_dir, "weights.{epoch:02d}-{val_loss:.2f}.hdf5"),
-            monitor='val_loss', verbose=1, save_best_only=False,
-            save_weights_only=True, mode='auto', period=1)
+        ms_callback = ModelCheckpoint(os.path.join(save_dir, "weights.{epoch:02d}-{val_loss:.2f}.hdf5"),
+                                      monitor='val_loss', verbose=1, save_best_only=False, 
+                                      save_weights_only=True, mode='auto', period=1)
 
         # Fit the model to the data by previously defined conditions (optimizer, loss ...)
-        model.fit_generator(generator=train_gen, epochs=args.epochs, shuffle=True, workers=4,
-                            validation_data=val_gen, callbacks=[ms_callback])
+        model.fit_generator(generator=train_gen, steps_per_epoch=len(train_gen), epochs=args.epochs, 
+                            workers=4, validation_data=val_gen, validation_steps=len(val_gen), 
+                            callbacks=[ms_callback])
 
         # Save the current model weights and used arguments
         save_arguments(os.path.join(save_dir, "arguments.txt"), args)

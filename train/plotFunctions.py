@@ -1,4 +1,5 @@
 import json
+import numpy as np
 import matplotlib.pyplot as plt
 
 from inputFunctions import getImgAndCommandList
@@ -27,7 +28,7 @@ def plot_ref_pred_comparison(reference, predictions, filter=None):
 
 
 def main():
-    json_file = "/home/florian/Development/tmp/run/mobilenet_reg_v3/predictions.json"
+    json_file = "/home/florian/Development/tmp/run/mobilenet_reg_v4/predictions.json"
 
     with open(json_file) as f:
         predictions = json.load(f)

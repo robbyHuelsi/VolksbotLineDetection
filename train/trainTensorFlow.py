@@ -16,9 +16,9 @@ parser = argparse.ArgumentParser(description='Train and predict on different mod
 parser.add_argument("--model_file", action="store", default=None, type=str,
                     help="Relative path to either a python module in models directory or "
                          "hdf5-saved model file.")
-parser.add_argument("--train_dense_only", action="store", default=False, type=bool,
+parser.add_argument("--train_dense_only", action="store", default=0, type=int,
                     help="Whether or not to train the dense layer only.")
-parser.add_argument("--augment_train_data", action="store", default=False, type=bool,
+parser.add_argument("--augment_train_data", action="store", default=0, type=int,
                     help="Whether or not to augment the training data.")
 parser.add_argument("--epochs", action="store", default=10, type=int,
                     help="Repeat the training over all samples the number of epochs.")
@@ -109,7 +109,7 @@ def main(args):
     tf.set_random_seed(args.seed)
 
     if args.crop:
-	exit(1)
+        exit(1)
 
     # Set the logging level of Tensorflow
     tf.logging.set_verbosity(args.log_level)

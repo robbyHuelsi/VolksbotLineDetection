@@ -24,7 +24,14 @@ def save_predictions(img_paths, predictions, json_path):
         prediction_dict["relFolderPath"] = rel_path
         prediction_dict["fileName"] = file_name
         prediction_dict["fileExt"] = file_ext
-        prediction_dict["predVelYaw"] = float(prediction[0])
+
+        try:
+            _ = iter(prediction)
+        except TypeError:
+            prediction_dict["predVelYaw"] = float(prediction)
+        else:
+            prediction_dict["predVelYaw"] = float(prediction[0])
+
         predictions_list.append(prediction_dict)
 
     if predictions_list:

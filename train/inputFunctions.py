@@ -11,7 +11,7 @@ import decimal
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
-                         onlyUseSubfolder=None, roundNdigits=3, trashhold=0.0,
+                         onlyUseSubfolder=None, roundNdigits=3, trashhold=0.01,
                          filterZeros=False, predictionsFile=None):
     print("Collecting from: {}".format(recordingsFolder))
     print("but only use subfolder: {}".format(onlyUseSubfolder))
@@ -147,7 +147,7 @@ def getImgPathByImgAndCmdDict(imgAndCmdDict):
 
 
 def addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath,
-                                      roundNdigits=3, printInfo=False):
+                                      roundNdigits=0, printInfo=False):
     with open(predictionsJsonPath) as f:
         predictedCmdList = json.load(f)
 

@@ -32,6 +32,7 @@ class MobileNetReg(HelperAPI):
         # Extend mobilenet by own fully connected layer
         x = mobnet_basic.layers[-1].output
         x = Flatten()(x)
+        x = Dense(9, activation='relu')(x)
         predictions = Dense(1, activation='linear', name='predictions')(x)
         mobnet_extended = Model(inputs=input_tensor, outputs=predictions, name='mobilenet_reg')
 

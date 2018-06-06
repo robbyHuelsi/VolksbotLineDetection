@@ -9,8 +9,9 @@ import inputFunctions as ifu
 
 # View and Controll
 class ImgAndCmdWindow():
-    def __init__(self, imgAndCommandList):
+    def __init__(self, imgAndCommandList, subfolderList, inverseCmds=True):
         self.imgAndCommandList = imgAndCommandList
+        self.inverseCmds = inverseCmds
         self.i = 0
         self.window = Tk()
         self._job = None  # Necessary for changing scale value by hand
@@ -20,33 +21,20 @@ class ImgAndCmdWindow():
 
         self.windowWidth = 1200
 
+        self.svSubfolders = StringVar(self.window)
+        subfolderList = [""] + subfolderList
+        self.svSubfolders.set(subfolderList[1])  # set the default option
+        self.omSubfolders = OptionMenu(self.window, self.svSubfolders, *subfoldersList)
+        self.omSubfolders.grid(row=0, column=1)
+
         self.lImgFrame = Label(self.window)
-        self.lImgFrame.grid(row=0, columnspan=3)
+        self.lImgFrame.grid(row=1, columnspan=3)
 
         self.scaleI = Scale(self.window, from_=0,
                             to=len(self.imgAndCommandList),
                             length=self.windowWidth, orient=HORIZONTAL,
                             command=self.scaleIUpdated)
-        self.scaleI.grid(row=1, columnspan=3)
-
-        '''
-        Label(self.window, text="Vel. X").grid(row=2, column=0)
-        self.eVelX = Entry(self.window)
-        self.eVelX.grid(row=2, column=1)
-        self.eVelX.focus_set()
-        self.pbVelX = Progressbar(self.window, orient=HORIZONTAL,
-                                      length=200, mode="determinate")
-        self.pbVelX["maximum"] = 2
-        self.pbVelX.grid(row=2, column=2)
-
-        Label(self.window, text="Vel. Yaw").grid(row=3, column=0)
-        self.eVelYaw = Entry(self.window)
-        self.eVelYaw.grid(row=3, column=1,)
-        self.pbVelYaw = Progressbar(self.window, orient=HORIZONTAL,
-                                      length=200, mode="determinate")
-        self.pbVelYaw["maximum"] = 2
-        self.pbVelYaw.grid(row=3, column=2)
-        '''
+        self.scaleI.grid(row=2, columnspan=3)
 
         bBackward = Button(self.window, text="Backward",
                            width=10, command=self._bBackwardClicked)
@@ -73,15 +61,19 @@ class ImgAndCmdWindow():
         thisImgAndCmdDict = self.imgAndCommandList[self.i]
         imgPath = ifu.getImgPathByImgAndCmdDict(thisImgAndCmdDict)
         trueVelX = thisImgAndCmdDict["velX"]
+        trueVelX = trueVelX*-1.0 if self.inverseCmds else trueVelX
         trueVelYaw = thisImgAndCmdDict["velYaw"]
+        trueVelYaw = trueVelYaw*-1.0 if self.inverseCmds else trueVelYaw
         if "predVelX" in thisImgAndCmdDict:
             predVelX = thisImgAndCmdDict["predVelX"]
+            predVelX = predVelX*-1.0 if self.inverseCmds else predVelX
         else:
-            predVelX = 0.0
+            predVelX = None
         if "predVelYaw" in thisImgAndCmdDict:
             predVelYaw = thisImgAndCmdDict["predVelYaw"]
+            predVelYaw = predVelYaw*-1.0 if self.inverseCmds else predVelYaw
         else:
-            predVelYaw = 0.0
+            predVelYaw = None
 
         self.window.title(str(imgPath))
 
@@ -155,6 +147,8 @@ class ImgAndCmdWindow():
         def __init__(self, master):
             self.master = master
             self.frame = Frame(self.master)
+            # self.frame.title("Commands" if not self.master.inverseCmds else "Commands (inverted)")
+
             bgColor = self.master.cget('bg')
             style = Style()
             style.theme_use('alt')
@@ -262,23 +256,29 @@ class ImgAndCmdWindow():
         def updateView(self, trueVelX, trueVelYaw, predVelX, predVelYaw):
             self.pbTrueVelXPos["value"] = trueVelX if trueVelX > 0.0 else 0
             self.pbTrueVelXNeg["value"] = 1.0 + trueVelX if trueVelX < 0.0 else 1
-            self.pbPredVelXPos["value"] = predVelX if predVelX > 0.0 else 0
-            self.pbPredVelXNeg["value"] = 1.0 + predVelX if predVelX < 0.0 else 1
+            self.pbPredVelXPos["value"] = predVelX if predVelX and predVelX > 0.0 else 0
+            self.pbPredVelXNeg["value"] = 1.0 + predVelX if predVelX and predVelX < 0.0 else 1
             self.pbTrueVelYawPos["value"] = trueVelYaw if trueVelYaw > 0.0 else 0
             self.pbTrueVelYawNeg["value"] = 1.0 + trueVelYaw if trueVelYaw < 0.0 else 1
-            self.pbPredVelYawPos["value"] = predVelYaw if predVelYaw > 0 else 0
-            self.pbPredVelYawNeg["value"] = 1.0 + predVelYaw if predVelYaw < 0.0 else 1
+            self.pbPredVelYawPos["value"] = predVelYaw if predVelYaw and predVelYaw > 0.0 else 0
+            self.pbPredVelYawNeg["value"] = 1.0 + predVelYaw if predVelYaw and predVelYaw < 0.0 else 1
 
             trueVelXPosText = str(round(trueVelX*100)) + " %" if trueVelX > 0 else ""
             trueVelXNegText = str(round(trueVelX*100)) + " %" if trueVelX < 0 else ""
             trueVelYawPosText = str(round(trueVelYaw*100)) + " %" if trueVelYaw > 0 else ""
             trueVelYawNegText = str(round(trueVelYaw*100)) + " %" if trueVelYaw <  0 else ""
-            predVelXPosText = str(round(predVelX*100)) + " %" if predVelX > 0 else ""
-            predVelXNegText = str(round(predVelX*100)) + " %" if predVelX < 0 else ""
-            predVelYawPosText = str(round(predVelYaw*100)) + " %" if predVelYaw > 0 else ""
-            predVelYawNegText = str(round(predVelYaw*100)) + " %" if predVelYaw < 0 else ""
-
-            print(trueVelX)
+            if predVelX:
+                predVelXPosText = str(round(predVelX*100)) + " %" if predVelX > 0 else ""
+                predVelXNegText = str(round(predVelX*100)) + " %" if predVelX < 0 else ""
+            else:
+                predVelXPosText = "NaN"
+                predVelXNegText = "NaN"
+            if predVelYaw:
+                predVelYawPosText = str(round(predVelYaw*100)) + " %" if predVelYaw > 0 else ""
+                predVelYawNegText = str(round(predVelYaw*100)) + " %" if predVelYaw < 0 else ""
+            else:
+                predVelYawPosText = "NaN"
+                predVelYawNegText = "NaN"
 
             self.svTrueVelXPos.set(trueVelXPosText)
             self.svPredVelXPos.set(predVelXPosText)
@@ -289,6 +289,7 @@ class ImgAndCmdWindow():
             self.svTrueVelYawNeg.set(trueVelYawNegText)
             self.svPredVelYawNeg.set(predVelYawNegText)
 
+            # print(trueVelX)
             # print(self.pbTrueVelXNeg["value"])
             # print(self.pbTrueVelYawNeg["value"])
 
@@ -318,21 +319,20 @@ class ImgAndCmdWindow():
 
 
 if __name__ == "__main__":
-    '''
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "volksbot", "data", "train_lane")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
-                                      "volksbot", "predictions.json")
+                                       "volksbot", "predictions.json")
     '''
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "recordings_vs")
-    predictionsJsonPath = os.path.join(os.path.expanduser("~"),
-                                       "volksbot", "predictions.json")
+    '''
+
     imgAndCmdList = ifu.getImgAndCommandList(recordingsFolder,
                                              onlyUseSubfolder="left_rect",
-                                             filterZeros=True)
+                                             filterZeros=None)
     imgAndCmdList = ifu.addPredictionsToImgAndCommandList(imgAndCmdList,
                                                           predictionsJsonPath,
                                                           roundNdigits=0)
-
-    app = ImgAndCmdWindow(imgAndCmdList)
+    subfoldersList = ifu.getSubfolderListOfImgAndCommandList(imgAndCmdList)
+    app = ImgAndCmdWindow(imgAndCmdList, subfoldersList)

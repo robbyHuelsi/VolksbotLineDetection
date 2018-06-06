@@ -160,8 +160,9 @@ def addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath,
                            (d['fileName'] in imgAndCmdDict['fileName'] and
                             d['fileExt'] in imgAndCmdDict['fileExt'])]
             if len(filteredPCL) == 0:
-                print("!!! No predicted cmd for " +
-                      getImgPathByImgAndCmdDict(imgAndCmdDict))
+                if printInfo:
+                    print("No predicted cmd for " +
+                          getImgPathByImgAndCmdDict(imgAndCmdDict))
             elif len(filteredPCL) > 1:
                 print("!!! Multiple predicted cmd's for " +
                       getImgPathByImgAndCmdDict(imgAndCmdDict) + ":")
@@ -182,6 +183,24 @@ def addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath,
                     print(imgAndCmdDict)
 
     return imgAndCommandList
+
+
+def getSubfolderListOfImgAndCommandList(imgAndCmdList):
+    subfoldersList = []
+
+    for i, imgAndCmdDict in enumerate(imgAndCmdList):
+        thisPath = imgAndCmdDict["folderPath"]
+        nextPath = imgAndCmdList[i+1]["folderPath"] if i < len(imgAndCmdList) - 1 else None
+        if i == len(imgAndCmdList) - 1 or thisPath != nextPath:
+            # Letzes Element oder das nächste Element gehört schon zum nächsten Subfolder
+            subfolderDict = {}
+            subfolderDict["folderPath"] = thisPath
+            subfolderDict["startI"] = subfoldersList[-1]["stopI"] + 1 if len(subfoldersList) > 0 else 0
+            subfolderDict["stopI"] = i
+            subfoldersList.append(subfolderDict)
+            # print(subfolderDict)
+            # print(len(subfoldersList))
+    return subfoldersList
 
 
 class ImageBatchGenerator(tf.keras.utils.Sequence):
@@ -295,12 +314,14 @@ class ImageBatchGenerator(tf.keras.utils.Sequence):
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
-                                    "recordings_vs")
+                                    "volksbot/data/train_lane")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
                                        "volksbot", "predictions.json")
-    imgAndCommandList = getImgAndCommandList(recordingsFolder,
+    imgAndCmdList = getImgAndCommandList(recordingsFolder,
                                              onlyUseSubfolder="left_rect",
-                                             filterZeros=True)
-    imgAndCommandList = addPredictionsToImgAndCommandList(imgAndCommandList,
-                                                          predictionsJsonPath,
-                                                          printInfo=True)
+                                             filterZeros=False)
+    # imgAndCommandList = addPredictionsToImgAndCommandList(imgAndCmdList,
+    #                                                      predictionsJsonPath,
+    #                                                      printInfo=True)
+
+    subfolderList = getSubfolderListOfImgAndCommandList(imgAndCmdList)

@@ -5,6 +5,7 @@ import csv
 import glob
 import numpy as np
 import tensorflow as tf
+from keras.utils import Sequence
 from PIL import Image
 import json
 import decimal
@@ -184,7 +185,7 @@ def addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath,
     return imgAndCommandList
 
 
-class ImageBatchGenerator(tf.keras.utils.Sequence):
+class ImageBatchGenerator(Sequence):
     """Generates data for Keras"""
 
     def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True, sub_dir="left_rect",

@@ -1,8 +1,10 @@
 import tensorflow as tf
 import numpy as np
-from tensorflow.python.keras import Model
-from tensorflow.python.keras.layers import Input, Dense, Flatten
-from tensorflow.python.keras.applications import MobileNet
+from keras.models import Model
+from keras.layers import Input, Dense, Flatten
+from keras.optimizers import Adam
+from keras.utils import to_categorical
+from keras.applications.mobilenet import MobileNet, preprocess_input
 from PIL import Image
 
 from models.helper_api import HelperAPI
@@ -17,7 +19,7 @@ class MobileNetCls(HelperAPI):
             img = img.crop((380, 0, 1100, 720))
         img = img.resize((224, 224), resample=Image.BILINEAR)
 
-        return tf.keras.applications.mobilenet.preprocess_input(np.float32(img))
+        return preprocess_input(np.float32(img))
 
     def preprocess_target(self, target):
         if isinstance(target, list):
@@ -63,7 +65,7 @@ class MobileNetCls(HelperAPI):
         # Finalize the model by compiling it
         if for_training:
             mobnet_extended.compile(loss='categorical_crossentropy', metrics=['accuracy'],
-                                    optimizer=tf.keras.optimizers.Adam(lr=args.learning_rate, decay=args.decay_rate))
+                                    optimizer=Adam(lr=args.learning_rate, decay=args.decay_rate))
 
         return mobnet_extended
 
@@ -86,7 +88,7 @@ def getVelYawClas(avVelYaw, minYaw=-1, maxYaw=1, classes=9):
 
 
 def oneHotEncode(velYawClass, classes=9):
-    encoded = tf.keras.utils.to_categorical(velYawClass, num_classes=classes)
+    encoded = to_categorical(velYawClass, num_classes=classes)
     return encoded
 
 

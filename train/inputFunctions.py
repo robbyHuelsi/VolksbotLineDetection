@@ -5,6 +5,7 @@ import csv
 import glob
 import numpy as np
 import tensorflow as tf
+from keras.utils import Sequence
 from PIL import Image
 import json
 import decimal
@@ -192,7 +193,7 @@ def getSubfolderListOfImgAndCommandList(imgAndCmdList):
         thisPath = imgAndCmdDict["folderPath"]
         nextPath = imgAndCmdList[i+1]["folderPath"] if i < len(imgAndCmdList) - 1 else None
         if i == len(imgAndCmdList) - 1 or thisPath != nextPath:
-            # Letzes Element oder das nächste Element gehört schon zum nächsten Subfolder
+            # Letzes Element oder das naechste Element gehoert schon zum naechsten Subfolder
             subfolderDict = {}
             subfolderDict["folderPath"] = thisPath
             subfolderDict["startI"] = subfoldersList[-1]["stopI"] + 1 if len(subfoldersList) > 0 else 0
@@ -203,7 +204,7 @@ def getSubfolderListOfImgAndCommandList(imgAndCmdList):
     return subfoldersList
 
 
-class ImageBatchGenerator(tf.keras.utils.Sequence):
+class ImageBatchGenerator(Sequence):
     """Generates data for Keras"""
 
     def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True, sub_dir="left_rect",

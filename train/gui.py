@@ -332,6 +332,7 @@ if __name__ == "__main__":
                                              onlyUseSubfolder="left_rect",
                                              filterZeros=True)
     imgAndCmdList = ifu.addPredictionsToImgAndCommandList(imgAndCmdList,
-                                                          predictionsJsonPath)
+                                                          predictionsJsonPath,
+                                                          roundNdigits=0)
 
     app = ImgAndCmdWindow(imgAndCmdList)

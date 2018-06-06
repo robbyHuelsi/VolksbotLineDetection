@@ -11,8 +11,8 @@ import decimal
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
-                         onlyUseSubfolder=None, filterZeros=False,
-                         predictionsFile=None):
+                         onlyUseSubfolder=None, roundNdigits=3, trashhold=0.0,
+                         filterZeros=False, predictionsFile=None):
     print("Collecting from: {}".format(recordingsFolder))
     print("but only use subfolder: {}".format(onlyUseSubfolder))
     cmdVelFiles = []
@@ -67,6 +67,8 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
                                                 nextFileName,
                                                 lastVelX,
                                                 lastVelYaw,
+                                                roundNdigits=roundNdigits,
+                                                trashhold=trashhold,
                                                 printInfo=printInfo)
                         inputDir["folderPath"] = imgFolder
                         inputDir["fileName"] = thisFileName
@@ -144,8 +146,8 @@ def getImgPathByImgAndCmdDict(imgAndCmdDict):
                         + imgAndCmdDict["fileExt"])
 
 
-def addPredictionsToImgAndCommandList(imgAndCommandList,
-                                      predictionsJsonPath, printInfo=False):
+def addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath,
+                                      roundNdigits=3, printInfo=False):
     with open(predictionsJsonPath) as f:
         predictedCmdList = json.load(f)
 
@@ -167,11 +169,18 @@ def addPredictionsToImgAndCommandList(imgAndCommandList,
                     print(d)
             else:
                 if "predVelX" in filteredPCL[0]:
-                    imgAndCmdDict["predVelX"] = filteredPCL[0]["predVelX"]
+                    predVelX = filteredPCL[0]["predVelX"]
+                    if roundNdigits and roundNdigits >= 0:
+                        predVelX = round(predVelX, ndigits=roundNdigits)
+                    imgAndCmdDict["predVelX"] = predVelX
                 if "predVelYaw" in filteredPCL[0]:
-                    imgAndCmdDict["predVelYaw"] = filteredPCL[0]["predVelYaw"]
+                    predVelYaw = filteredPCL[0]["predVelYaw"]
+                    if roundNdigits and roundNdigits >= 0:
+                        predVelYaw = round(predVelYaw, ndigits=roundNdigits)
+                    imgAndCmdDict["predVelYaw"] = predVelYaw
                 if printInfo:
                     print(imgAndCmdDict)
+
     return imgAndCommandList
 
 

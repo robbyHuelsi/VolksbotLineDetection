@@ -8,7 +8,6 @@ import argparse
 from inputFunctions import ImageBatchGenerator
 from outputFunctions import save_arguments, save_predictions
 
-
 parser = argparse.ArgumentParser(description='Train and predict on different models')
 
 # Hyperparameters of the training run
@@ -41,9 +40,9 @@ parser.add_argument("--save_file", action="store", default="checkpoint.hdf5", ty
 parser.add_argument("--data_dir", action="store", default=os.path.join(
                     os.path.expanduser("~"), "recordings"), type=str,
                     help="Path to the dataset directory.")
-#parser.add_argument("--train_dir", action="store", default="train", type=str,
+# parser.add_argument("--train_dir", action="store", default="train", type=str,
 #                    help="Subdirectory in dataset directory for training images")
-#parser.add_argument("--val_dir", action="store", default="val", type=str,
+# parser.add_argument("--val_dir", action="store", default="val", type=str,
 #                    help="Subdirectory in dataset directory for validation images.")
 parser.add_argument("--take_or_skip", action="store", default=10, type=int,
                     help="Take or skip value used for splitting the training set into train and test.")
@@ -62,7 +61,7 @@ parser.add_argument("--seed", action="store", default=0, type=int,
 def build_model(model_file, args=None, for_training=True):
     # Build the model depending on the flags either from keras model definition in code
     # or restore the model from hdf5 file
-    if model_file:  #and os.path.exists(os.path.join("models", "{}.py".format(model_file))):
+    if model_file:  # and os.path.exists(os.path.join("models", "{}.py".format(model_file))):
         # Import the model from a python module/code
         if __package__ is None:
             module = importlib.import_module("models.{}".format(model_file))
@@ -135,9 +134,6 @@ def main(args):
                                       preprocess_input=helper.preprocess_input,
                                       preprocess_target=helper.preprocess_target,
                                       sub_dir=args.sub_dir, take_or_skip=args.take_or_skip)
-
-        print(len(train_gen.labels) + len(val_gen.labels))
-        assert len(train_gen.labels) + len(val_gen.labels) == 4227
 
         # TODO Think about adding early stopping as callback here
         # TODO Add plotting callback https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e

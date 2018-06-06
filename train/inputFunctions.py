@@ -7,11 +7,12 @@ import numpy as np
 import tensorflow as tf
 from PIL import Image
 import json
+import decimal
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
-                         onlyUseSubfolder=None, filterZeros=False,
-                         predictionsFile=None):
+                         onlyUseSubfolder=None, roundNdigits=3, trashhold=0.0,
+                         filterZeros=False, predictionsFile=None):
     print("Collecting from: {}".format(recordingsFolder))
     print("but only use subfolder: {}".format(onlyUseSubfolder))
     cmdVelFiles = []
@@ -61,19 +62,20 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
                             lastVelX = 0.0
                             lastVelYaw = 0.0
 
-                        velX, velYaw = meanCmd(cmdDir,
-                                               thisFileName,
-                                               nextFileName,
-                                               lastVelX,
-                                               lastVelYaw,
-                                               printInfo)
-                        if not filterZeros or (velX != 0 and velYaw != 0):
-                            inputDir["folderPath"] = imgFolder
-                            inputDir["fileName"] = thisFileName
-                            inputDir["fileExt"] = thisFileExt
-                            inputDir["velX"] = velX
-                            inputDir["velYaw"] = velYaw
-                            inputList.append(inputDir)
+                        velX, velYaw = calcCmds(cmdDir,
+                                                thisFileName,
+                                                nextFileName,
+                                                lastVelX,
+                                                lastVelYaw,
+                                                roundNdigits=roundNdigits,
+                                                trashhold=trashhold,
+                                                printInfo=printInfo)
+                        inputDir["folderPath"] = imgFolder
+                        inputDir["fileName"] = thisFileName
+                        inputDir["fileExt"] = thisFileExt
+                        inputDir["velX"] = velX
+                        inputDir["velYaw"] = velYaw
+                        inputList.append(inputDir)
 
                         if printInfo:
                             print(inputDir)
@@ -81,6 +83,9 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
             print("!!! NOT FOUND: ", str(csvFilePath))
 
     if len(inputList) > 0:
+        if filterZeros:
+            inputList = [d for d in inputList if
+                         (d['velX'] != 0.0 or d['velYaw'] != 0.0)]
         return inputList
     else:
         print("!!! NO INPUT")
@@ -98,7 +103,8 @@ def getCmdDir(path):
     return cmdDir
 
 
-def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo=False):
+def calcCmds(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw,
+             roundNdigits=3, trashhold=0.0, printInfo=False):
     startTimestamp = float(thisImgName) / 1000000000
     endTimestamp = float(nextImgName) / 1000000000
     sumValX = 0
@@ -117,6 +123,14 @@ def meanCmd(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw, printInfo=Fa
         avVelX = lastVelX if lastVelX else 0.0
         avVelYaw = lastVelYaw if lastVelYaw else 0.0
 
+    if roundNdigits and roundNdigits >= 0:
+        avVelX = round(avVelX, ndigits=roundNdigits)
+        avVelYaw = round(avVelYaw, ndigits=roundNdigits)
+
+    if trashhold and trashhold >= 0.0:
+        avVelX = avVelX if abs(avVelX) > trashhold else 0.0
+        avVelYaw = avVelYaw if abs(avVelYaw) > trashhold else 0.0
+
     if printInfo:
         print("Between ", str(startTimestamp), " and ", str(endTimestamp),
               "is 1 command:" if countCmds == 1 else " are " + str(countCmds) + " commands:")
@@ -132,8 +146,8 @@ def getImgPathByImgAndCmdDict(imgAndCmdDict):
                         + imgAndCmdDict["fileExt"])
 
 
-def addPredictionsToImgAndCommandList(imgAndCommandList,
-                                      predictionsJsonPath, printInfo=False):
+def addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath,
+                                      roundNdigits=3, printInfo=False):
     with open(predictionsJsonPath) as f:
         predictedCmdList = json.load(f)
 
@@ -155,11 +169,18 @@ def addPredictionsToImgAndCommandList(imgAndCommandList,
                     print(d)
             else:
                 if "predVelX" in filteredPCL[0]:
-                    imgAndCmdDict["predVelX"] = filteredPCL[0]["predVelX"]
+                    predVelX = filteredPCL[0]["predVelX"]
+                    if roundNdigits and roundNdigits >= 0:
+                        predVelX = round(predVelX, ndigits=roundNdigits)
+                    imgAndCmdDict["predVelX"] = predVelX
                 if "predVelYaw" in filteredPCL[0]:
-                    imgAndCmdDict["predVelYaw"] = filteredPCL[0]["predVelYaw"]
+                    predVelYaw = filteredPCL[0]["predVelYaw"]
+                    if roundNdigits and roundNdigits >= 0:
+                        predVelYaw = round(predVelYaw, ndigits=roundNdigits)
+                    imgAndCmdDict["predVelYaw"] = predVelYaw
                 if printInfo:
                     print(imgAndCmdDict)
+
     return imgAndCommandList
 
 

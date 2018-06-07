@@ -11,6 +11,12 @@ from models.helper_api import HelperAPI
 
 
 class MobileNetCls(HelperAPI):
+    def monitor_val(self):
+        return "val_acc"
+
+    def monitor_mode(self):
+        return "max"
+
     def preprocess_input(self, input, crop=True):
         # Open, (crop,) resize and rescale the image
         img = Image.open(input)

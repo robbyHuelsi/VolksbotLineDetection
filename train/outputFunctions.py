@@ -19,7 +19,7 @@ def save_predictions(img_paths, predictions, json_path):
         prediction_dict = {}
         path, file_name_ext = os.path.split(img_path)
         file_name, file_ext = os.path.splitext(file_name_ext)
-        dirs = path.split(os.sep)
+        dirs = path.split(os.path.sep)
         rel_path = os.path.join(dirs[-2], dirs[-1])
         prediction_dict["relFolderPath"] = rel_path
         prediction_dict["fileName"] = file_name

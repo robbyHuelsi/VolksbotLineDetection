@@ -1,3 +1,5 @@
+import glob
+
 import tensorflow as tf
 import importlib
 import datetime
@@ -7,7 +9,8 @@ import argparse
 
 from inputFunctions import ImageBatchGenerator
 from outputFunctions import save_arguments, save_predictions
-from keras.callbacks import ModelCheckpoint
+from plotFunctions import PlotLearning
+from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.models import load_model
 
 parser = argparse.ArgumentParser(description='Train and predict on different models')
@@ -18,6 +21,14 @@ parser.add_argument("--model_file", action="store", default=None, type=str,
                          "hdf5-saved model file.")
 parser.add_argument("--train_dense_only", action="store", default=0, type=int,
                     help="Whether or not to train the dense layer only.")
+parser.add_argument("--stop_early", action="store", default=0, type=int,
+                    help="Whether or not to use early stopping.")
+parser.add_argument("--patience", action="store", default=2, type=int,
+                    help="Number of epochs to wait for validation loss/accuracy to change.")
+parser.add_argument("--plot_progress", action="store", default=1, type=int,
+                    help="Whether or not to plot the learning progress during training.")
+parser.add_argument("--show_summary", action="store", default=0, type=int,
+                    help="Whether or not to show the model summary before training.")
 parser.add_argument("--augment_train_data", action="store", default=0, type=int,
                     help="Whether or not to augment the training data.")
 parser.add_argument("--epochs", action="store", default=10, type=int,
@@ -35,6 +46,8 @@ parser.add_argument("--session_name", action="store", default=str(datetime.datet
                     help="Session name of this training and validation run.")
 parser.add_argument("--run_dir", action="store", default="/tmp/run", type=str,
                     help="Parent directory of the <session_name> folder.")
+parser.add_argument("--restore_file", action="store", default=None, type=str,
+                    help="Path to the file with weights that should be restored.")
 parser.add_argument("--save_file", action="store", default="checkpoint.hdf5", type=str,
                     help="Name of the file where the model and weights get saved.")
 
@@ -82,11 +95,23 @@ def build_model(model_file, args=None, for_training=True):
     return model, helper
 
 
-def restore_weights(model, save_file):
-    if os.path.exists(save_file):
+def restore_recent_weights(model, save_dir, restore_file=None):
+    # Try to recover the last run epoch
+    files = glob.glob(os.path.join(save_dir, "weights_*.hdf5"))
+    epochs = [int(os.path.basename(f).split("_")[1]) for f in files]
+    last_epoch = 0 if len(epochs) == 0 else np.max(epochs)
+
+    if restore_file is None and len(files) > 0:
+        recent_files = glob.glob(os.path.join(save_dir, "weights_{0:02d}_*.hdf5".format(last_epoch)))
+        assert len(recent_files) == 1
+        restore_file = recent_files[0]
+
+    if restore_file is not None and os.path.exists(restore_file):
         # If the model directory and the save file already exist, try to recover already saved weights
-        tf.logging.info("Restoring weights from {}!".format(save_file))
-        model.load_weights(save_file)
+        tf.logging.info("Restoring weights from {}!".format(restore_file))
+        model.load_weights(restore_file)
+
+    return last_epoch
 
 
 def predict(model, helper, img_paths=None, pred_gen=None):
@@ -100,7 +125,7 @@ def predict(model, helper, img_paths=None, pred_gen=None):
 
     predictions = helper.postprocess_output(output)
 
-    return predictions
+    return np.squeeze(predictions)
 
 
 def main(args):
@@ -108,14 +133,14 @@ def main(args):
     np.random.seed(args.seed)
     tf.set_random_seed(args.seed)
 
-    if args.crop:
-        exit(1)
-
     # Set the logging level of Tensorflow
     tf.logging.set_verbosity(args.log_level)
 
     # Define keras model as None initially
     model, helper = build_model(args.model_file, args)
+
+    if args.show_summary:
+        model.summary()
 
     # Output for TensorBoard and model file will be inside args.tb_dir
     save_dir = os.path.join(args.run_dir, "{}_{}".format(model.name, args.session_name))
@@ -126,7 +151,7 @@ def main(args):
         os.makedirs(save_dir)
 
     # Restore the weights, existence of save_file is checked inside the function
-    restore_weights(model, save_file)
+    last_epoch = restore_recent_weights(model, save_dir, args.restore_file)
 
     # If the number of epochs is greater zero, training cycles are run
     if args.epochs > 0:
@@ -140,23 +165,26 @@ def main(args):
                                       preprocess_target=helper.preprocess_target,
                                       sub_dir=args.sub_dir, take_or_skip=args.take_or_skip)
 
-        # TODO Think about adding early stopping as callback here
-        # TODO Add plotting callback https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
-        ms_callback = ModelCheckpoint(os.path.join(save_dir, "weights.{epoch:02d}-{val_loss:.2f}.hdf5"),
-                                      monitor='val_loss', verbose=1, save_best_only=False, 
-                                      save_weights_only=True, mode='auto', period=1)
+        # Construct callbacks list with checkpoint, early stopping and plotting
+        callbacks = []
+        callbacks += [ModelCheckpoint(os.path.join(save_dir,
+                                                   "weights_{epoch:02d}_{" + helper.monitor_val() + ":.2f}.hdf5"),
+                                      monitor=helper.monitor_val(), verbose=1, save_best_only=False,
+                                      save_weights_only=True, mode=helper.monitor_mode(), period=1)]
+        callbacks += [PlotLearning()] if args.plot_progress else []
+        callbacks += [EarlyStopping(monitor=helper.monitor_val(), patience=args.patience, verbose=1,
+                                    mode=helper.monitor_mode())] if args.stop_early else []
 
         # Fit the model to the data by previously defined conditions (optimizer, loss ...)
-        model.fit_generator(generator=train_gen, steps_per_epoch=len(train_gen), epochs=args.epochs, 
-                            workers=4, validation_data=val_gen, validation_steps=len(val_gen), 
-                            callbacks=[ms_callback])
+        model.fit_generator(generator=train_gen, steps_per_epoch=len(train_gen), epochs=args.epochs,
+                            workers=4, validation_data=val_gen, validation_steps=len(val_gen),
+                            callbacks=callbacks, initial_epoch=last_epoch)
 
         # Save the current model weights and used arguments
         save_arguments(os.path.join(save_dir, "arguments.txt"), args)
         model.save(save_file)
         tf.logging.info('Saved final model and weights to {}!'.format(save_file))
 
-    # TODO Change later! Right now the predictions are made for all training images
     pred_gen = ImageBatchGenerator(args.data_dir, batch_size=1, crop=args.crop,
                                    preprocess_input=helper.preprocess_input,
                                    preprocess_target=helper.preprocess_target,

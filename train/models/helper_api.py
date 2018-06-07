@@ -17,3 +17,11 @@ class HelperAPI(object):
     @abc.abstractmethod
     def postprocess_output(self, output):
         pass
+
+    @abc.abstractmethod
+    def monitor_val(self):
+        return "val_loss"
+
+    @abc.abstractmethod
+    def monitor_mode(self):
+        return "auto"

@@ -6,8 +6,11 @@ import time
 import threading
 
 import inputFunctions as ifu
+import matplotlib
+matplotlib.use("TkAgg")  # Must to be set before import pyplot (inside of pfu)!!!
+import plotFunctions as pfu
 
-# View and Controll
+# View and Control
 class ImgAndCmdWindow():
     def __init__(self, imgAndCmdList, subfolderList, inverseCmds=True):
         self.fullImgAndCmdList = imgAndCmdList
@@ -165,7 +168,11 @@ class ImgAndCmdWindow():
             self.bPlayStop.config(text="Play")
             
     def _bShowPlotClicked(self):
-        print("yeh")
+        print(self.filteredImgAndCmdList)
+        refs = [d["velYaw"] for d in self.filteredImgAndCmdList]
+        preds = [p["predVelYaw"] if "predVelYaw" in p else None for p in self.filteredImgAndCmdList]
+
+        pfu.plot_ref_pred_comparison(refs, preds)
 
     def onClosing(self):
         #if self.player:

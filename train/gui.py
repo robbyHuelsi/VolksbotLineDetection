@@ -9,29 +9,33 @@ import inputFunctions as ifu
 
 # View and Controll
 class ImgAndCmdWindow():
-    def __init__(self, imgAndCommandList, subfolderList, inverseCmds=True):
-        self.imgAndCommandList = imgAndCommandList
+    def __init__(self, imgAndCmdList, subfolderList, inverseCmds=True):
+        self.fullImgAndCmdList = imgAndCmdList
+        self.filteredImgAndCmdList = None
+        self.applySubfolderFilter()
+        
         self.inverseCmds = inverseCmds
-        self.i = 0
+        self.frameNumber = 0
         self.window = Tk()
         self._job = None  # Necessary for changing scale value by hand
         self.player = None
 
         # self.inputbox.state("zoomed")
 
-        self.windowWidth = 1200
+        self.windowWidth = 600
 
         self.svSubfolders = StringVar(self.window)
-        subfolderList = [""] + subfolderList
-        self.svSubfolders.set(subfolderList[1])  # set the default option
-        self.omSubfolders = OptionMenu(self.window, self.svSubfolders, *subfoldersList)
+        self.svSubfolders.set("All folders")  # set the default option
+        self.omSubfolders = OptionMenu(self.window, self.svSubfolders,
+                                       *(["", "All folders"] + [d["folderPath"] for d in subfolderList]),
+                                       command=self.omSubfoldersChanged)
         self.omSubfolders.grid(row=0, column=1)
 
         self.lImgFrame = Label(self.window)
         self.lImgFrame.grid(row=1, columnspan=3)
 
         self.scaleI = Scale(self.window, from_=0,
-                            to=len(self.imgAndCommandList),
+                            to=1,
                             length=self.windowWidth, orient=HORIZONTAL,
                             command=self.scaleIUpdated)
         self.scaleI.grid(row=2, columnspan=3)
@@ -51,14 +55,25 @@ class ImgAndCmdWindow():
         self.cmdWindow = ImgAndCmdWindow.CmdWindow(Toplevel(self.window))
 
         # self.window.protocol("WM_DELETE_WINDOW", self.onClosing())
-        self.updateView()
-        self.window.mainloop()
+        self.updateViewForSubfolderFilter()
+        self.updateViewForFrame()
+        self.window.mainloop() 
+        
+    def applySubfolderFilter(self, folderPath=None):
+        if not folderPath:
+            self.filteredImgAndCmdList = self.fullImgAndCmdList
+        else:
+            self.filteredImgAndCmdList = [e for e in self.fullImgAndCmdList if e["folderPath"] == folderPath]
+        
+    def updateViewForSubfolderFilter(self):
+        self.scaleI.set(0)
+        self.scaleI.configure(to=len(self.filteredImgAndCmdList))
 
-    def updateView(self, i=-1):
+    def updateViewForFrame(self, i=-1):
         if i > -1:
-            self.i = i
+            self.frameNumber = i
 
-        thisImgAndCmdDict = self.imgAndCommandList[self.i]
+        thisImgAndCmdDict = self.filteredImgAndCmdList[self.frameNumber]
         imgPath = ifu.getImgPathByImgAndCmdDict(thisImgAndCmdDict)
         trueVelX = thisImgAndCmdDict["velX"]
         trueVelX = trueVelX*-1.0 if self.inverseCmds else trueVelX
@@ -85,7 +100,7 @@ class ImgAndCmdWindow():
         self.lImgFrame.configure(image=itkFrame)
         self.lImgFrame.image = itkFrame
 
-        self.scaleI.set(self.i)
+        self.scaleI.set(self.frameNumber)
 
         '''
         self.eVelX.delete(0, END)
@@ -96,8 +111,16 @@ class ImgAndCmdWindow():
         self.pbVelYaw["value"] = trueVelYaw + 1
         '''
 
-        self.cmdWindow.updateView(trueVelX, trueVelYaw, predVelX, predVelYaw)
-
+        self.cmdWindow.updateViewForFrame(trueVelX, trueVelYaw, predVelX, predVelYaw)
+    
+    def omSubfoldersChanged(self, value):
+        if value == "All folders":
+            self.applySubfolderFilter()
+        else:
+            self.applySubfolderFilter(value)
+        self.updateViewForSubfolderFilter()
+        self.updateViewForFrame(0)
+    
     def scaleIUpdated(self, event):
         if self._job:
             self.window.after_cancel(self._job)
@@ -105,21 +128,21 @@ class ImgAndCmdWindow():
 
     def updateIByScaleI(self):
         self._job = None
-        self.updateView(int(self.scaleI.get()))
+        self.updateViewForFrame(int(self.scaleI.get()))
 
     def forward(self):
-        if self.i < len(self.imgAndCommandList)-1:
-            self.i += 1
+        if self.frameNumber < len(self.filteredImgAndCmdList)-1:
+            self.frameNumber += 1
         else:
-            self.i = 0
-        self.updateView()
+            self.frameNumber = 0
+        self.updateViewForFrame()
 
     def backward(self):
-        if self.i > 0:
-            self.i -= 1
+        if self.frameNumber > 0:
+            self.frameNumber -= 1
         else:
-            self.i = len(self.imgAndCommandList)-1
-        self.updateView()
+            self.frameNumber = len(self.filteredImgAndCmdList)-1
+        self.updateViewForFrame()
 
     def _bForwardClicked(self):
         self.forward()
@@ -253,7 +276,7 @@ class ImgAndCmdWindow():
 
             self.frame.pack()
 
-        def updateView(self, trueVelX, trueVelYaw, predVelX, predVelYaw):
+        def updateViewForFrame(self, trueVelX, trueVelYaw, predVelX, predVelYaw):
             self.pbTrueVelXPos["value"] = trueVelX if trueVelX > 0.0 else 0
             self.pbTrueVelXNeg["value"] = 1.0 + trueVelX if trueVelX < 0.0 else 1
             self.pbPredVelXPos["value"] = predVelX if predVelX and predVelX > 0.0 else 0
@@ -322,7 +345,7 @@ if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "volksbot", "data", "train_lane")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
-                                       "volksbot", "predictions.json")
+                                       "volksbot", "run", "mobilenet_21cls_lane_v1", "predictions.json")
     '''
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "recordings_vs")

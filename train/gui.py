@@ -28,7 +28,7 @@ class ImgAndCmdWindow():
         self.svSubfolders.set("All folders")  # set the default option
         self.omSubfolders = OptionMenu(self.window, self.svSubfolders,
                                        *(["", "All folders"] + [d["folderPath"] for d in subfolderList]),
-                                       command=self.omSubfoldersChanged)
+                                       command=self._omSubfoldersChanged)
         self.omSubfolders.grid(row=0, column=1)
 
         self.lImgFrame = Label(self.window)
@@ -37,7 +37,7 @@ class ImgAndCmdWindow():
         self.scaleI = Scale(self.window, from_=0,
                             to=1,
                             length=self.windowWidth, orient=HORIZONTAL,
-                            command=self.scaleIUpdated)
+                            command=self._scaleFrameNumberChanged)
         self.scaleI.grid(row=2, columnspan=3)
 
         bBackward = Button(self.window, text="Backward",
@@ -51,6 +51,9 @@ class ImgAndCmdWindow():
         self.bPlayStop = Button(self.window, text="Play",
                                 width=10, command=self._bPlayPausedClicked)
         self.bPlayStop.grid(row=3, column=1)
+        
+        bShowPlot = Button(self.window, text="Show Plot", width=10, command=self._bShowPlotClicked)
+        bShowPlot.grid(row=7, column=2)
 
         self.cmdWindow = ImgAndCmdWindow.CmdWindow(Toplevel(self.window))
 
@@ -58,13 +61,7 @@ class ImgAndCmdWindow():
         self.updateViewForSubfolderFilter()
         self.updateViewForFrame()
         self.window.mainloop() 
-        
-    def applySubfolderFilter(self, folderPath=None):
-        if not folderPath:
-            self.filteredImgAndCmdList = self.fullImgAndCmdList
-        else:
-            self.filteredImgAndCmdList = [e for e in self.fullImgAndCmdList if e["folderPath"] == folderPath]
-        
+            
     def updateViewForSubfolderFilter(self):
         self.scaleI.set(0)
         self.scaleI.configure(to=len(self.filteredImgAndCmdList))
@@ -112,24 +109,13 @@ class ImgAndCmdWindow():
         '''
 
         self.cmdWindow.updateViewForFrame(trueVelX, trueVelYaw, predVelX, predVelYaw)
-    
-    def omSubfoldersChanged(self, value):
-        if value == "All folders":
-            self.applySubfolderFilter()
+        
+    def applySubfolderFilter(self, folderPath=None):
+        if not folderPath:
+            self.filteredImgAndCmdList = self.fullImgAndCmdList
         else:
-            self.applySubfolderFilter(value)
-        self.updateViewForSubfolderFilter()
-        self.updateViewForFrame(0)
+            self.filteredImgAndCmdList = [e for e in self.fullImgAndCmdList if e["folderPath"] == folderPath]
     
-    def scaleIUpdated(self, event):
-        if self._job:
-            self.window.after_cancel(self._job)
-        self._job = self.window.after(500, self.updateIByScaleI)
-
-    def updateIByScaleI(self):
-        self._job = None
-        self.updateViewForFrame(int(self.scaleI.get()))
-
     def forward(self):
         if self.frameNumber < len(self.filteredImgAndCmdList)-1:
             self.frameNumber += 1
@@ -143,6 +129,23 @@ class ImgAndCmdWindow():
         else:
             self.frameNumber = len(self.filteredImgAndCmdList)-1
         self.updateViewForFrame()
+        
+    def _omSubfoldersChanged(self, value):
+        if value == "All folders":
+            self.applySubfolderFilter()
+        else:
+            self.applySubfolderFilter(value)
+        self.updateViewForSubfolderFilter()
+        self.updateViewForFrame(0)
+    
+    def _scaleFrameNumberChanged(self, event):
+        if self._job:
+            self.window.after_cancel(self._job)
+        self._job = self.window.after(500, self._updateFrameNumberByScale)
+
+    def _updateFrameNumberByScale(self):
+        self._job = None
+        self.updateViewForFrame(int(self.scaleI.get()))
 
     def _bForwardClicked(self):
         self.forward()
@@ -160,6 +163,9 @@ class ImgAndCmdWindow():
                 self.player.stop()
             self.player = None
             self.bPlayStop.config(text="Play")
+            
+    def _bShowPlotClicked(self):
+        print("yeh")
 
     def onClosing(self):
         #if self.player:

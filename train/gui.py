@@ -16,7 +16,7 @@ class ImgAndCmdWindow():
         self.fullImgAndCmdList = imgAndCmdList
         self.filteredImgAndCmdList = None
         self.applySubfolderFilter()
-        
+
         self.inverseCmds = inverseCmds
         self.frameNumber = 0
         self.window = Tk()
@@ -54,7 +54,7 @@ class ImgAndCmdWindow():
         self.bPlayStop = Button(self.window, text="Play",
                                 width=10, command=self._bPlayPausedClicked)
         self.bPlayStop.grid(row=3, column=1)
-        
+
         bShowPlot = Button(self.window, text="Show Plot", width=10, command=self._bShowPlotClicked)
         bShowPlot.grid(row=7, column=2)
 
@@ -63,8 +63,8 @@ class ImgAndCmdWindow():
         # self.window.protocol("WM_DELETE_WINDOW", self.onClosing())
         self.updateViewForSubfolderFilter()
         self.updateViewForFrame()
-        self.window.mainloop() 
-            
+        self.window.mainloop()
+
     def updateViewForSubfolderFilter(self):
         self.scaleI.set(0)
         self.scaleI.configure(to=len(self.filteredImgAndCmdList))
@@ -112,13 +112,13 @@ class ImgAndCmdWindow():
         '''
 
         self.cmdWindow.updateViewForFrame(trueVelX, trueVelYaw, predVelX, predVelYaw)
-        
+
     def applySubfolderFilter(self, folderPath=None):
         if not folderPath:
             self.filteredImgAndCmdList = self.fullImgAndCmdList
         else:
             self.filteredImgAndCmdList = [e for e in self.fullImgAndCmdList if e["folderPath"] == folderPath]
-    
+
     def forward(self):
         if self.frameNumber < len(self.filteredImgAndCmdList)-1:
             self.frameNumber += 1
@@ -132,7 +132,7 @@ class ImgAndCmdWindow():
         else:
             self.frameNumber = len(self.filteredImgAndCmdList)-1
         self.updateViewForFrame()
-        
+
     def _omSubfoldersChanged(self, value):
         if value == "All folders":
             self.applySubfolderFilter()
@@ -140,7 +140,7 @@ class ImgAndCmdWindow():
             self.applySubfolderFilter(value)
         self.updateViewForSubfolderFilter()
         self.updateViewForFrame(0)
-    
+
     def _scaleFrameNumberChanged(self, event):
         if self._job:
             self.window.after_cancel(self._job)
@@ -166,7 +166,7 @@ class ImgAndCmdWindow():
                 self.player.stop()
             self.player = None
             self.bPlayStop.config(text="Play")
-            
+
     def _bShowPlotClicked(self):
         print(self.filteredImgAndCmdList)
         refs = [d["velYaw"] for d in self.filteredImgAndCmdList]
@@ -358,7 +358,7 @@ if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "volksbot", "data", "train_lane")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
-                                       "volksbot", "run", "mobilenet_21cls_lane_v1", "predictions.json")
+                                       "volksbot", "runs", "mobilenet_reg_lane_v3", "predictions.json")
     '''
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "recordings_vs")
@@ -366,7 +366,7 @@ if __name__ == "__main__":
 
     imgAndCmdList = ifu.getImgAndCommandList(recordingsFolder,
                                              onlyUseSubfolder="left_rect",
-                                             filterZeros=None)
+                                             filterZeros=True)
     imgAndCmdList = ifu.addPredictionsToImgAndCommandList(imgAndCmdList,
                                                           predictionsJsonPath,
                                                           roundNdigits=0)

@@ -7,7 +7,7 @@ from keras.utils import to_categorical
 from keras.applications.mobilenet import MobileNet, preprocess_input
 from PIL import Image
 
-from models.helper_api import HelperAPI
+from .helper_api import HelperAPI
 
 
 class MobileNetCls(HelperAPI):

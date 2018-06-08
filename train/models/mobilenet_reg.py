@@ -5,7 +5,7 @@ from keras.optimizers import Adam
 from keras.applications.mobilenet import MobileNet, preprocess_input
 from PIL import Image
 
-from models.helper_api import HelperAPI
+from .helper_api import HelperAPI
 
 
 class MobileNetReg(HelperAPI):
@@ -40,8 +40,6 @@ class MobileNetReg(HelperAPI):
         x = GlobalAveragePooling2D()(x)
         x = Reshape(shape, name='reshape_1')(x)
         x = Dropout(0.5, name='dropout')(x)
-        # x = Conv2D(512, (1, 1), padding='same', activation='relu')(x)
-        # x = Conv2D(256, (1, 1), padding='same', activation='relu')(x)
         x = Conv2D(49, (1, 1), padding='same', name='pre_predictions', activation='relu')(x)
         x = Conv2D(1, (1, 1), padding='same', name='predictions', activation='linear')(x)
         predictions = Flatten()(x)

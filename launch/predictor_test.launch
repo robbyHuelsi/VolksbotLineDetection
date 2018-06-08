@@ -2,9 +2,10 @@
 <launch>
     <arg name="x_vel" default="0.1" />i
     <arg name="model_file" />
-    <arg name="weight_file" />
+    <arg name="restore_file" />
     <arg name="args_file" default=""/>
     <arg name="show_time" default="false" />
+    <arg name="crop" default="0" />
 
     <!--node name="camera_node" pkg="usb_cam" type="usb_cam_node" respawn="true" output="log">
 	<param name="video_device" value="/dev/video0" />
@@ -102,9 +103,10 @@
 	<remap from="/image" to="/left/image_rect_color/compressed" />
 	<param name="x_vel" type="double" value="$(arg x_vel)"/>
     	<param name="model_file" type="str" value="$(arg model_file)"/>
-    	<param name="weight_file" type="str" value="$(arg weight_file)"/>
+    	<param name="restore_file" type="str" value="$(arg restore_file)"/>
     	<param name="args_file" type="str" value="$(arg args_file)"/>
 	<param name="show_time" type="bool" value="$(arg show_time)"/>
+	<param name="crop" type="int" value="$(arg crop)"/>
     </node>
 
     <node name="turtlesim_node" pkg="turtlesim" type="turtlesim_node" respawn="false" output="screen">

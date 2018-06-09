@@ -1,4 +1,3 @@
-import tensorflow as tf
 import numpy as np
 from keras.models import Model
 from keras.layers import Input, Dense, Flatten

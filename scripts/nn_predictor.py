@@ -11,8 +11,6 @@ from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Twist
 from autonomous_driving.train.trainTensorFlow import build_model, restore_recent_weights
 from skimage.transform import resize
-import keras.applications.mobilenet as mobilenet
-from keras.models import load_model
 
 parser = argparse.ArgumentParser(description='Run neural network based line/lane following ROS node.')
 parser.add_argument("--x_vel", action="store", type=float, default=0.1)
@@ -49,51 +47,33 @@ class Image2TwistNode:
         rospy.loginfo("Tensorflow version {} loaded!".format(tf.__version__))
 
         # Initialize the Keras model and helper from model_file and restore the weights
-	if self.args.model_file.endswith(".hdf5"):
-		tf.logging.info("RESTORE WHOLE MODEL")
-		self.model = load_model(self.args.model_file, custom_objects={
-					'relu6': mobilenet.mobilenet.relu6})
-	else:
-        	self.model, self.helper = build_model(self.args.model_file, self.args, for_training=False)
-        	restore_recent_weights(self.model, "", self.args.restore_file)
-
+        self.model, self.helper = build_model(self.args.model_file, self.args, for_training=False)
+        restore_recent_weights(self.model, "", self.args.restore_file)
         self.model._make_predict_function()
-        self.session = tf.keras.backend.get_session()
-        #self.graph = tf.get_default_graph()
-        #self.graph.finalize()
 
-	#for layer in self.model.layers:
-	#	print(layer.name)
-	
-	#iweights = self.model.get_layer("conv_pw_13_bn").get_weights()
-	
-	#for w in weights:
-	#	print(w[0])
-	#	print(w.shape)
-	#print(weights.shape)
-	#print(weights)
-	#input()
+        # TODO: Remove this code because it destroyed the preloaded weights!
+        # self.session = tf.keras.backend.get_session()
+        # self.graph = tf.get_default_graph()
+        # self.graph.finalize()
 
+        # Set max delay to 40ms because at 40 FPS an image should be received after 33ms
         self.max_delay = rospy.Duration.from_sec(0.04)
 
         # Initialize the ROS subscriber and publisher and go into loop afterwards
         self.sub = rospy.Subscriber('image', CompressedImage, self.img_callback, queue_size=1)
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
-        self.img_pub = rospy.Publisher('volksbot_image/compressed', CompressedImage)
+        self.img_pub = rospy.Publisher('image_resized/compressed', CompressedImage, queue_size=1)
         rospy.loginfo("Image2Twist predictor is ready!")
         rospy.spin()
 
     def img_callback(self, img_msg):
-        if self.args.show_time:
-            start = time.time()
-
         # Discard images if they are too old
-        now = rospy.Time.now()
-        # rospy.loginfo("{}".format((now_nsecs-img_msg.header.stamp.nsecs)>self.max_nsecs_delay))
-        if (now - img_msg.header.stamp) > self.max_delay:
+        callback_start = rospy.Time.now()
+
+        if (callback_start - img_msg.header.stamp) > self.max_delay:
             return
-	else:
-	    rospy.loginfo("{}, delayed by {}ns".format(img_msg.header.stamp, now - img_msg.header.stamp))
+        else:
+            rospy.loginfo("Received image delayed by {}ns".format(callback_start - img_msg.header.stamp))
 
         # TODO Check: Image conversion from msg -> cv2 (BGR) -> np (RGB)
         np_arr = np.fromstring(img_msg.data, np.uint8)
@@ -105,17 +85,14 @@ class Image2TwistNode:
             np_img = np_img[:, 380:1100, :]
 
         np_img = resize(np_img, (224, 224))
-	np_img = np.multiply(np.subtract(np_img, 0.5), 2.0)
-	#print(np.max(np_img))
-	#print(np.min(np_img))
+        np_img = np.multiply(np.subtract(np_img, 0.5), 2.0)
 
-        if self.args.show_time:
-            end = time.time()
-            rospy.loginfo("Prep took: {}".format(np.round(end - start, 4)))
-            start = end
+        prep_end = rospy.Time.now()
+        prep_dur = prep_end - callback_start
 
+        # TODO Remove this after evaluation
         # Run prediction for the current image
-        #with self.session.as_default():
+        # with self.session.as_default():
         #    with self.graph.as_default():
         output = self.model.predict(np.expand_dims(np_img, axis=0))
         prediction = self.helper.postprocess_output(output)
@@ -125,28 +102,26 @@ class Image2TwistNode:
         cmd.linear.x = self.args.x_vel
         cmd.angular.z = prediction[0]
 
-	rospy.loginfo("angular.z: {}".format(cmd.angular.z))
+        pred_end = rospy.Time.now()
+        pred_dur = pred_end - prep_end
+        rospy.loginfo("Predicted angular.z: {} in {}ns after {}ns prep.".format(cmd.angular.z, pred_dur, prep_dur))
 
         # Send the created message to the roscore
         self.pub.publish(cmd)
 
-        #msg = CompressedImage()
-        #msg.header.stamp = rospy.Time.now()
-        #msg.format = "jpeg" # "bgr8; jpeg compressed bgr8"
-        #np_img = np_img[:, :, ::-1]
+        # Send the resized image to roscore
+        msg = CompressedImage()
+        msg.header.stamp = rospy.Time.now()
+        msg.format = "jpeg"  # "bgr8; jpeg compressed bgr8"
+        msg.data = np.array(cv2.imencode('.jpg', np_img[:, :, ::-1])[1]).tostring()
 
-	#plt.clf()
-	#plt.cla()
-        #plt.imshow((np_img/2.0)+0.5)
-        #plt.waitforbuttonpress()
-
-        #msg.data = np.array(cv2.imencode('.jpg', np_img)[1]).tostring()
         # Publish new image
-        #self.img_pub.publish(msg)
+        self.img_pub.publish(msg)
 
-        if self.args.show_time:
-            end = time.time()
-            rospy.loginfo("Pred took: {}".format(np.round(end - start, 4)))
+        # plt.clf()
+        # plt.cla()
+        # plt.imshow((np_img/2.0)+0.5)
+        # plt.waitforbuttonpress()
 
 
 if __name__ == '__main__':

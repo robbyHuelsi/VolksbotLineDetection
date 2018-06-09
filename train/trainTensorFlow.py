@@ -12,6 +12,7 @@ from outputFunctions import save_arguments, save_predictions
 from plotFunctions import PlotLearning
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.models import load_model
+from keras.applications.mobilenet import relu6
 
 parser = argparse.ArgumentParser(description='Train and predict on different models')
 
@@ -85,10 +86,10 @@ def build_model(model_file, args=None, for_training=True):
 
         helper = module.model_helper
         model = helper.build_model(args, for_training)
-    elif model_file and os.path.exists(model_file):
-        # Restore the keras model from a hdf5 file
+    elif os.path.isabs(model_file) and os.path.exists(model_file) and \
+            (model_file.ends_with(".hdf5") or model_file.ends_with(".h5")):
         helper = None
-        model = load_model(model_file)
+        model = load_model(args.model_file, custom_objects={'relu6': relu6})
     else:
         raise ValueError("Model file '{}' does not exist!".format(model_file))
 
@@ -105,6 +106,10 @@ def restore_recent_weights(model, save_dir, restore_file=None):
         recent_files = glob.glob(os.path.join(save_dir, "weights_{0:02d}_*.hdf5".format(last_epoch)))
         assert len(recent_files) == 1
         restore_file = recent_files[0]
+    elif restore_file and not os.path.isabs(restore_file):
+        restore_file = os.path.join(save_dir, restore_file)
+    else:
+        tf.logging.info("Will not restore any weights!")
 
     if restore_file is not None and os.path.exists(restore_file):
         # If the model directory and the save file already exist, try to recover already saved weights

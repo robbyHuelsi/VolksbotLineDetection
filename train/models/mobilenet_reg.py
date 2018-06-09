@@ -1,6 +1,6 @@
 import numpy as np
 from keras.models import Model
-from keras.layers import Input, Dense, Flatten, Dropout, GlobalAveragePooling2D, Reshape, Conv2D, Activation, Conv1D
+from keras.layers import Input, Flatten, Dropout, GlobalAveragePooling2D, Reshape, Conv2D
 from keras.optimizers import Adam
 from keras.applications.mobilenet import MobileNet, preprocess_input
 from PIL import Image
@@ -19,30 +19,22 @@ class MobileNetReg(HelperAPI):
         input_shape = (224, 224, 3)
         input_tensor = Input(input_shape)
 
-        mobnet_basic = MobileNet(include_top=False, input_shape=input_shape, input_tensor=input_tensor)
+        mobnet_basic = MobileNet(weights=None, include_top=False, input_shape=input_shape, input_tensor=input_tensor)
 
         if for_training and args.train_dense_only:
             # Disable training for the convolutional layers
             for index, layer in enumerate(mobnet_basic.layers):
                 layer.trainable = False
 
-                # TODO Remove code below if unnecessary
-                # Disable the training for some layers of mobilenet
-                # if index < 89:
-                # mobnet_basic.layers[index].trainable = False
-                # print("{}#{}, trainable={}".format(index, layer.name, layer.trainable))
-                # layer.trainable = False
-
         # Extend mobilenet by own fully connected layer
-        shape = (1, 1, 1024)
-
         x = mobnet_basic.layers[-1].output
         x = GlobalAveragePooling2D()(x)
-        x = Reshape(shape, name='reshape_1')(x)
+        x = Reshape((1, 1, 1024), name='reshape_1')(x)
         x = Dropout(0.5, name='dropout')(x)
         x = Conv2D(49, (1, 1), padding='same', name='pre_predictions', activation='relu')(x)
         x = Conv2D(1, (1, 1), padding='same', name='predictions', activation='linear')(x)
         predictions = Flatten()(x)
+
         mobnet_extended = Model(inputs=input_tensor, outputs=predictions, name='mobilenet_reg')
 
         # Finalize the model by compiling it

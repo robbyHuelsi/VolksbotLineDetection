@@ -12,10 +12,11 @@ def plot_ref_pred_comparison(reference, predictions, filter=None):
 
     if filter is not None:
         plt.suptitle(filter)
-        
+      
+    # Filter datapoints without predictions   
     predictions = [p if p != None else np.nan for p in predictions]
     predictions = np.ma.array(predictions)
-    predictions = np.ma.masked_where(predictions == 0, predictions)
+    predictions = np.ma.masked_where(predictions == np.nan, predictions)
 
     plt.subplot(211)
     plt.title("Yaw Velocity")

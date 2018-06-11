@@ -56,10 +56,10 @@ parser.add_argument("--save_file", action="store", default="checkpoint.hdf5", ty
 parser.add_argument("--data_dir", action="store", default=os.path.join(
                     os.path.expanduser("~"), "recordings"), type=str,
                     help="Path to the dataset directory.")
-# parser.add_argument("--train_dir", action="store", default="train", type=str,
-#                    help="Subdirectory in dataset directory for training images")
-# parser.add_argument("--val_dir", action="store", default="val", type=str,
-#                    help="Subdirectory in dataset directory for validation images.")
+parser.add_argument("--train_dir", action="append", default=None, type=str,
+                    help="One or more subdirectories in dataset directory where training images are located.")
+parser.add_argument("--val_dir", action="append", default=None, type=str,
+                    help="One or more subdirectories in dataset directory where validation images are located.")
 parser.add_argument("--take_or_skip", action="store", default=10, type=int,
                     help="Take or skip value used for splitting the training set into train and test.")
 parser.add_argument("--sub_dir", action="store", default="left_rect", type=str,
@@ -161,14 +161,8 @@ def main(args):
     # If the number of epochs is greater zero, training cycles are run
     if args.epochs > 0:
         # The image batch generator that handles the image loading
-        train_gen = ImageBatchGenerator(args.data_dir, batch_size=args.batch_size, crop=args.crop,
-                                        preprocess_input=helper.preprocess_input,
-                                        preprocess_target=helper.preprocess_target,
-                                        sub_dir=args.sub_dir, take_or_skip=(-1 * args.take_or_skip))
-        val_gen = ImageBatchGenerator(args.data_dir, batch_size=args.batch_size, crop=args.crop,
-                                      preprocess_input=helper.preprocess_input,
-                                      preprocess_target=helper.preprocess_target,
-                                      sub_dir=args.sub_dir, take_or_skip=args.take_or_skip)
+        train_gen = ImageBatchGenerator.from_args_and_helper(args, helper, "train")
+        val_gen = ImageBatchGenerator.from_args_and_helper(args, helper, "val")
 
         # Construct callbacks list with checkpoint, early stopping and plotting
         callbacks = []
@@ -190,11 +184,7 @@ def main(args):
         model.save(save_file)
         tf.logging.info('Saved final model and weights to {}!'.format(save_file))
 
-    pred_gen = ImageBatchGenerator(args.data_dir, batch_size=1, crop=args.crop,
-                                   preprocess_input=helper.preprocess_input,
-                                   preprocess_target=helper.preprocess_target,
-                                   sub_dir=args.sub_dir, shuffle=False, take_or_skip=0)
-
+    pred_gen = ImageBatchGenerator.from_args_and_helper(args, helper, "pred")
     predictions = predict(model, helper, pred_gen=pred_gen)
     save_predictions(pred_gen.features, predictions, os.path.join(save_dir, "predictions.json"))
 

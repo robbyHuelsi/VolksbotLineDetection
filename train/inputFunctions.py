@@ -191,7 +191,7 @@ def getSubfolderListOfImgAndCommandList(imgAndCmdList):
 
     for i, imgAndCmdDict in enumerate(imgAndCmdList):
         thisPath = imgAndCmdDict["folderPath"]
-        nextPath = imgAndCmdList[i+1]["folderPath"] if i < len(imgAndCmdList) - 1 else None
+        nextPath = imgAndCmdList[i + 1]["folderPath"] if i < len(imgAndCmdList) - 1 else None
         if i == len(imgAndCmdList) - 1 or thisPath != nextPath:
             # Letzes Element oder das naechste Element gehoert schon zum naechsten Subfolder
             subfolderDict = {}
@@ -207,8 +207,9 @@ def getSubfolderListOfImgAndCommandList(imgAndCmdList):
 class ImageBatchGenerator(Sequence):
     """Generates data for Keras"""
 
-    def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True, sub_dir="left_rect",
-                 preprocess_input=None, preprocess_target=None, labeled=True, crop=True, take_or_skip=0):
+    def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True, image_type="left_rect",
+                 preprocess_input=None, preprocess_target=None, labeled=True, crop=True, take_or_skip=0,
+                 multi_dir=None):
         """Initialization"""
         self.dir = dir
         self.dim = dim
@@ -219,9 +220,17 @@ class ImageBatchGenerator(Sequence):
         self._labels = []
         self._img_paths = []
         self.crop = crop
+        self.image_type = image_type
 
         if labeled:
-            data_list = getImgAndCommandList(dir, onlyUseSubfolder=sub_dir, filterZeros=True)
+            data_list = []
+
+            if multi_dir is None:
+                data_list = getImgAndCommandList(dir, onlyUseSubfolder=image_type, filterZeros=True)
+            else:
+                for sub_dir in multi_dir:
+                    data_list += getImgAndCommandList(os.path.join(dir, sub_dir), onlyUseSubfolder=image_type,
+                                                      filterZeros=True)
         else:
             # If no labels are needed, search for every image in the directory
             data_list = [{"imgPath": p} for p in glob.glob(os.path.join(dir, "*", "*.jpg"))]
@@ -311,6 +320,29 @@ class ImageBatchGenerator(Sequence):
     @property
     def features(self):
         return self._img_paths
+
+    @staticmethod
+    def from_args_and_helper(args, helper, mode):
+        assert mode in ["train", "val", "pred"], "Mode {} is not supported!".format(mode)
+
+        if mode == "train":
+            return ImageBatchGenerator(args.data_dir, batch_size=args.batch_size, crop=args.crop,
+                                       preprocess_input=helper.preprocess_input,
+                                       preprocess_target=helper.preprocess_target,
+                                       image_type=args.sub_dir, take_or_skip=(-1 * args.take_or_skip),
+                                       multi_dir=args.train_dir)
+        elif mode == "val":
+            return ImageBatchGenerator(args.data_dir, batch_size=args.batch_size, crop=args.crop,
+                                       preprocess_input=helper.preprocess_input,
+                                       preprocess_target=helper.preprocess_target,
+                                       image_type=args.sub_dir, take_or_skip=args.take_or_skip,
+                                       multi_dir=args.val_dir)
+        elif mode == "pred":
+            return ImageBatchGenerator(args.data_dir, batch_size=1, crop=args.crop,
+                                       preprocess_input=helper.preprocess_input,
+                                       preprocess_target=helper.preprocess_target,
+                                       image_type=args.sub_dir, shuffle=False, take_or_skip=0,
+                                       multi_dir=args.train_dir)
 
 
 if __name__ == "__main__":

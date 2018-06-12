@@ -12,7 +12,7 @@ from outputFunctions import save_arguments, save_predictions
 from plotFunctions import PlotLearning
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.models import load_model
-from keras.applications.mobilenet import relu6
+import keras.applications.mobilenet as mobilenet
 
 parser = argparse.ArgumentParser(description='Train and predict on different models')
 
@@ -89,7 +89,7 @@ def build_model(model_file, args=None, for_training=True):
     elif os.path.isabs(model_file) and os.path.exists(model_file) and \
             (model_file.ends_with(".hdf5") or model_file.ends_with(".h5")):
         helper = None
-        model = load_model(args.model_file, custom_objects={'relu6': relu6})
+        model = load_model(args.model_file, custom_objects={'relu6': mobilenet.mobilenet.relu6})
     else:
         raise ValueError("Model file '{}' does not exist!".format(model_file))
 

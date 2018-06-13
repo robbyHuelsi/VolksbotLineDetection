@@ -59,4 +59,21 @@ sudo apt-get install ros-kinetic-joy
 sudo apt-get install ros-kinetic-teleop-twist-joy
 ```
 
+In `launch/logitech.config.yaml` Logitech's Wireless Gamepad F710 is configures to **controll the robot for recordings**. For record training data its helpful to use a continuous linaer speed. Therefore `yaml` file is codificated to:
+```
+axis_linear: 5				# RT = right shoulder axis of gamepad
+# old/default value of axis_linear: 4	# right directional pad up-down-axis of gamepad
+scale_linear: -0.2			# max. linear speed for LB button pressed
+scale_linear_turbo: -0.8		# max. linear speed for RB button pressed
 
+axis_angular: 3				# right directional pad left-right-axis of gamepad
+scale_angular: 0.5			# max. angular speed
+
+enable_button: 4			# LB = left shoulder button of gamepad
+enable_turbo_button: 5			# RB = right shoulder button of gamepad
+```
+
+Getting continuous linaer speed works by a small hack: The value of an untouched (right) shoulder axis of the gamepad is `1.0`. Is it completely pressed in the value is `-1.0`. (`0.0` is in the middle.)
+
+If you want to **start recording your own training data** run `roslaunch autonomous_driving joy_volksbot.launch` and you are able to controll the volksbot. For that you have to press and hold all the time LB for normal linear speed or RB for turbo linear speed.
+**Problem**: The gamepad's right shoulder axis (RT) is not sending `1.0` for linear speed from the start. To fix that just press RT a little bit and release. Now, if you press LB or RB the volksbot is moving forward with continuous speed. For moving backwards press RT completely in (while holding LB or RB). You can modify linear speed while driving by pressing RT more or less.

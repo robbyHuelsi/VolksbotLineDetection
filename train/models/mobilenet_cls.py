@@ -62,6 +62,15 @@ class MobileNetCls(HelperAPI):
 
         # Extend mobile net by own fully connected layer
         x = mobnet_basic.layers[-1].output
+
+        # TODO Evaluate if the original layers from MobileNet bring better performance/accuracy
+        # x = GlobalAveragePooling2D()(x)
+        # x = Reshape((1, 1, 1024), name='reshape_1')(x)
+        # x = Dropout(0.5, name='dropout')(x)
+        # x = Conv2D(num_classes, (1, 1), padding='same', name='conv_preds')(x)
+        # x = Activation('softmax', name='act_softmax')(x)
+        # x = Flatten()(x)
+
         x = Flatten()(x)
         predictions = Dense(num_classes, activation='softmax', name='predictions')(x)
 

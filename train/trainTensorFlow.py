@@ -13,6 +13,7 @@ from plotFunctions import PlotLearning
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.models import load_model
 import keras.applications.mobilenet as mobilenet
+from tabulate import tabulate
 
 parser = argparse.ArgumentParser(description='Train and predict on different models')
 
@@ -30,7 +31,7 @@ parser.add_argument("--plot_progress", action="store", default=1, type=int,
                     help="Whether or not to plot the learning progress during training.")
 parser.add_argument("--show_summary", action="store", default=0, type=int,
                     help="Whether or not to show the model summary before training.")
-parser.add_argument("--augment_train_data", action="store", default=0, type=int,
+parser.add_argument("--augment", action="store", default=0, type=int,
                     help="Whether or not to augment the training data.")
 parser.add_argument("--epochs", action="store", default=10, type=int,
                     help="Repeat the training over all samples the number of epochs.")
@@ -66,6 +67,8 @@ parser.add_argument("--sub_dir", action="store", default="left_rect", type=str,
                     help="Choose which camera image is used as network input.")
 parser.add_argument("--crop", action="store", default=0, type=int,
                     help="Crop and resize the image or just resize it.")
+parser.add_argument("--shuffle", action="store", default=0, type=int,
+                    help="Whether or not the training data set will be shuffled.")
 
 # Tensorflow specific parameters
 parser.add_argument("--log_level", action="store", default=tf.logging.INFO, type=int,

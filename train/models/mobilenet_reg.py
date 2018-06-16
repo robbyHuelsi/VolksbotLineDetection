@@ -3,8 +3,6 @@ from keras.models import Model
 from keras.layers import Input, Flatten, Dropout, GlobalAveragePooling2D, Reshape, Conv2D
 from keras.optimizers import Adam
 from keras.applications.mobilenet import MobileNet, preprocess_input
-from PIL import Image
-
 from .helper_api import HelperAPI
 
 
@@ -44,16 +42,8 @@ class MobileNetReg(HelperAPI):
 
         return mobnet_extended
 
-    def preprocess_input(self, input, crop=True):
-        # Open, (crop,) resize and rescale the image
-        img = Image.open(input)
-
-        if crop:
-            img = img.crop((380, 0, 1100, 720))
-
-        img = img.resize((224, 224), resample=Image.NEAREST)  # , resample=Image.BILINEAR)
-
-        return preprocess_input(np.float32(img))
+    def preprocess_input(self, input):
+        return preprocess_input(input)
 
     def preprocess_target(self, target):
         return target

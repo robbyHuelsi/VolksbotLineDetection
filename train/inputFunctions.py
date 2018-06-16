@@ -2,13 +2,12 @@ from __future__ import print_function
 import os
 import collections
 import csv
-import glob
 import numpy as np
 import tensorflow as tf
 from keras.utils import Sequence
 from PIL import Image
 import json
-import decimal
+from generateDataset import pillow_augmentations, gaussian_noise
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
@@ -209,7 +208,7 @@ class ImageBatchGenerator(Sequence):
 
     def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True, image_type="left_rect",
                  preprocess_input=None, preprocess_target=None, labeled=True, crop=True, take_or_skip=0,
-                 multi_dir=None):
+                 multi_dir=None, augment=0):
         """Initialization"""
         self.dir = dir
         self.dim = dim
@@ -221,19 +220,16 @@ class ImageBatchGenerator(Sequence):
         self._img_paths = []
         self.crop = crop
         self.image_type = image_type
+        self.augment = augment
 
-        if labeled:
-            data_list = []
+        data_list = []
 
-            if multi_dir is None:
-                data_list = getImgAndCommandList(dir, onlyUseSubfolder=image_type, filterZeros=True)
-            else:
-                for sub_dir in multi_dir:
-                    data_list += getImgAndCommandList(os.path.join(dir, sub_dir), onlyUseSubfolder=image_type,
-                                                      filterZeros=True)
+        if multi_dir is None:
+            data_list = getImgAndCommandList(dir, onlyUseSubfolder=image_type, filterZeros=True)
         else:
-            # If no labels are needed, search for every image in the directory
-            data_list = [{"imgPath": p} for p in glob.glob(os.path.join(dir, "*", "*.jpg"))]
+            for sub_dir in multi_dir:
+                data_list += getImgAndCommandList(os.path.join(dir, sub_dir), onlyUseSubfolder=image_type,
+                                                  filterZeros=True)
 
         if data_list is None:
             tf.logging.warning("No images found in {}!".format(dir))
@@ -294,10 +290,17 @@ class ImageBatchGenerator(Sequence):
         if self.crop:
             img = img.crop((380, 0, 1100, 720))
 
-        img = img.resize(self.dim, resample=Image.BILINEAR)
-        nd_img = (np.float32(img) / 127.5) - 1.0
+        img = img.resize(self.dim, resample=Image.NEAREST)
 
-        return nd_img
+        if self.augment:
+            img = pillow_augmentations(img)
+
+        img = self.preprocess_input_fn(np.float32(img)) if self.preprocess_input_fn else np.float32(img)
+
+        if self.augment:
+            img = gaussian_noise(img)
+
+        return img
 
     def __data_generation(self, img_paths_batch):
         """ Generates data containing batch_size samples """
@@ -306,10 +309,7 @@ class ImageBatchGenerator(Sequence):
 
         # Generate data
         for i, img_path in enumerate(img_paths_batch):
-            if self.preprocess_input_fn:
-                x_batch[i, ] = self.preprocess_input_fn(img_path, self.crop)
-            else:
-                x_batch[i, ] = self.__std_preprocess_input(img_path)
+            x_batch[i, ] = self.__std_preprocess_input(img_path)
 
         return x_batch
 
@@ -330,7 +330,7 @@ class ImageBatchGenerator(Sequence):
                                        preprocess_input=helper.preprocess_input,
                                        preprocess_target=helper.preprocess_target,
                                        image_type=args.sub_dir, take_or_skip=(-1 * args.take_or_skip),
-                                       multi_dir=args.train_dir)
+                                       multi_dir=args.train_dir, augment=args.augment, shuffle=bool(args.shuffle))
         elif mode == "val":
             return ImageBatchGenerator(args.data_dir, batch_size=args.batch_size, crop=args.crop,
                                        preprocess_input=helper.preprocess_input,

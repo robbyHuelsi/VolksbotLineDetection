@@ -7,7 +7,7 @@ class HelperAPI(object):
         pass
 
     @abc.abstractmethod
-    def preprocess_input(self, input, crop=True):
+    def preprocess_input(self, input):
         pass
 
     @abc.abstractmethod

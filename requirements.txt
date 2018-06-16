@@ -1,5 +1,6 @@
+tabulate
 numpy
-tensorflow==1.8.0
+tensorflow-gpu==1.8.0
 h5py==2.8.0
 Pillow
 matplotlib

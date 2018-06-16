@@ -61,12 +61,16 @@ class PlotLearning(Callback):
 
     def replot(self):
         self.ax.clear()
-        # self.ax.set_yscale('log')
+        self.ax.set_title("Loss History")
 
-        for m in self.params["metrics"]:
-            self.ax.plot(self.x, self.values[m], label=m, color=self.colors[m], linewidth=2)
+        num_metrics = len(self.values.keys())
+        cmap = plt.get_cmap('gnuplot')
+        colors = [cmap(i) for i in np.linspace(0.2, 0.8, num_metrics)]
 
-        #self.ax.set_xlim(self.x[0], self.x[-1])
+        for metric, color in zip(self.values.keys(), colors):
+            linestyle = "--" if "val" in metric else "-"
+            self.ax.plot(self.x, self.values[metric], label=metric, color=color, linewidth=2, linestyle=linestyle)
+
         self.ax.legend()
         self.ax.grid(True)
 

@@ -9,10 +9,10 @@ import matplotlib.pyplot as plt
 from keras.applications.mobilenet import preprocess_input
 
 
-def pillow_augmentations(pil_img, sharpness=0.25, color=0.25, contrast=0.25, brightness=0.25):
+def pillow_augmentations(pil_img, sharpness=1.0, contrast=0.25, color=1.0, brightness=0.25):
     pil_img = ImageEnhance.Sharpness(pil_img).enhance(np.random.normal(loc=1.0, scale=sharpness))
-    pil_img = ImageEnhance.Contrast(pil_img).enhance(np.random.normal(loc=1.0, scale=color))
-    pil_img = ImageEnhance.Color(pil_img).enhance(np.random.normal(loc=1.0, scale=contrast))
+    pil_img = ImageEnhance.Contrast(pil_img).enhance(np.random.normal(loc=1.0, scale=contrast))
+    pil_img = ImageEnhance.Color(pil_img).enhance(np.random.normal(loc=1.0, scale=color))
     pil_img = ImageEnhance.Brightness(pil_img).enhance(np.random.normal(loc=1.0, scale=brightness))
 
     return pil_img

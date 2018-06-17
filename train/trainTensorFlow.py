@@ -67,7 +67,7 @@ parser.add_argument("--sub_dir", action="store", default="left_rect", type=str,
                     help="Choose which camera image is used as network input.")
 parser.add_argument("--crop", action="store", default=0, type=int,
                     help="Crop and resize the image or just resize it.")
-parser.add_argument("--shuffle", action="store", default=0, type=int,
+parser.add_argument("--shuffle", action="store", default=1, type=int,
                     help="Whether or not the training data set will be shuffled.")
 
 # Tensorflow specific parameters

@@ -2,7 +2,7 @@ import json
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.callbacks import Callback
-
+from matplotlib import style
 from inputFunctions import getImgAndCommandList
 
 
@@ -27,7 +27,8 @@ def plot_ref_pred_comparison(reference, predictions, filter=None):
 
     plt.subplot(212)
     both = np.concatenate([np.asmatrix(reference), np.asmatrix(predictions)], axis=0).transpose()
-    plt.hist(both, bins=11, orientation='vertical', histtype='bar', color=['xkcd:orange', 'xkcd:sky blue'], label=["Reference", "Prediction"])
+    plt.hist(both, bins=11, orientation='vertical', histtype='bar', color=['xkcd:orange', 'xkcd:sky blue'],
+             label=["Reference", "Prediction"])
     plt.legend()
 
     plt.show()
@@ -37,10 +38,7 @@ class PlotLearning(Callback):
     def __init__(self):
         self.x = []
         self.values = {}
-        self.colors = {"loss": 'xkcd:orange', "val_loss": 'xkcd:sky blue',
-                       "mean_squared_error": 'xkcd:orange', "val_mean_squared_error": 'xkcd:sky blue',
-                       "mean_absolute_error": 'xkcd:orange', "val_mean_absolute_error": 'xkcd:sky blue',
-                       "acc": 'xkcd:orange', "val_acc": 'xkcd:sky blue'}
+        style.use('ggplot')
         self.fig = None
         self.ax = None
 

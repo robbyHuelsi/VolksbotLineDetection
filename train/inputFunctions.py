@@ -336,13 +336,13 @@ class ImageBatchGenerator(Sequence):
                                        preprocess_input=helper.preprocess_input,
                                        preprocess_target=helper.preprocess_target,
                                        image_type=args.sub_dir, take_or_skip=args.take_or_skip,
-                                       multi_dir=args.val_dir)
+                                       multi_dir=args.val_dir, shuffle=False)
         elif mode == "pred":
             return ImageBatchGenerator(args.data_dir, batch_size=1, crop=args.crop,
                                        preprocess_input=helper.preprocess_input,
                                        preprocess_target=helper.preprocess_target,
                                        image_type=args.sub_dir, shuffle=False, take_or_skip=0,
-                                       multi_dir=args.train_dir)
+                                       multi_dir=args.val_dir)
 
 
 if __name__ == "__main__":

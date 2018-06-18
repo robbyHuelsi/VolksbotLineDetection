@@ -69,6 +69,10 @@ parser.add_argument("--crop", action="store", default=0, type=int,
                     help="Crop and resize the image or just resize it.")
 parser.add_argument("--shuffle", action="store", default=1, type=int,
                     help="Whether or not the training data set will be shuffled.")
+parser.add_argument("--regularize", action="store", default=0.0, type=float,
+                    help="Whether or not the weights of the dense layers will be regularized.")
+parser.add_argument("--dropout", action="store", default=0.5, type=float,
+                    help="The percentage of node activations that get dropped before the dense layers.")
 
 # Tensorflow specific parameters
 parser.add_argument("--log_level", action="store", default=tf.logging.INFO, type=int,
@@ -177,16 +181,19 @@ def main(args):
         callbacks += [EarlyStopping(monitor=helper.monitor_val(), patience=args.patience, verbose=1,
                                     mode=helper.monitor_mode())] if args.stop_early else []
 
+        # Save the arguments before training start
+        save_arguments(os.path.join(save_dir, "arguments.txt"), args)
+
         # Fit the model to the data by previously defined conditions (optimizer, loss ...)
         model.fit_generator(generator=train_gen, steps_per_epoch=len(train_gen), epochs=args.epochs,
                             workers=4, validation_data=val_gen, validation_steps=len(val_gen),
                             callbacks=callbacks, initial_epoch=last_epoch)
 
-        # Save the current model weights and used arguments
-        save_arguments(os.path.join(save_dir, "arguments.txt"), args)
+        # Save the current model + weights
         model.save(save_file)
         tf.logging.info('Saved final model and weights to {}!'.format(save_file))
 
+    # Do prediction on the complete validation set and save it
     pred_gen = ImageBatchGenerator.from_args_and_helper(args, helper, "pred")
     predictions = predict(model, helper, pred_gen=pred_gen)
     save_predictions(pred_gen.features, predictions, os.path.join(save_dir, "predictions.json"))

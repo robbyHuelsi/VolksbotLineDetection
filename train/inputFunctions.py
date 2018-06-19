@@ -15,7 +15,7 @@ from turtledemo.penrose import star
 def getImgAndCommandList(recordingsFolder, printInfo=False,
                          onlyUseSubfolder=None, roundNdigits=3,
                          framesTimeTrashhold = None, cmdTrashhold=0.01,
-                         filterZeros=False, predictionsFile=None,
+                         filterZeros=False,
                          getFullCmdList=False):
     
     '''

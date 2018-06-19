@@ -38,7 +38,7 @@ def plotCmd(imgAndCmdList):
     velYawList = []
 
     # plot figure
-    fig = plt.figure(figsize=(10, 3)) 
+    fig = plt.figure(figsize=(4.5, 3.5)) 
     ax = plt.subplot(111)
     
     # set the y-spine (see below for more info on `set_position`)
@@ -56,9 +56,15 @@ def plotCmd(imgAndCmdList):
     ax.set_xlim(0, 1)
     ax.set_ylim(0, 0.5)
     
+    # y axis ticks
+    vals = ax.get_yticks()
+    vals = [str(int(x*100)) for x in vals]
+    ax.set_yticklabels(vals)
+
+    
     # axis labels
-    ax.set_xlabel('Zeit [Sekunden]')
-    ax.set_xlabel('Giergeschwindigkeit')
+    ax.set_xlabel('Zeit [s]')
+    ax.set_ylabel('Giergeschwindigkeit [%]')
     
     for i, imgAndCmdDict in enumerate(imgAndCmdList[start:end]):
         imgTime = imgAndCmdDict["delay"]
@@ -71,13 +77,21 @@ def plotCmd(imgAndCmdList):
             velYawFullCmdList.append(float(fullCmdDict["velYaw"]))
             #print("        - " + str(cmdTime) + ": " + str(fullCmdDict["velYaw"]))
     
-    ax.axvline(x=imgTimeList[0], color="grey", linestyle=":", linewidth=1, label="Aufkommen neuer Bilder")
+    ax.axvline(x=imgTimeList[0], color="#8a8b8a", linestyle=":", linewidth=1, label="Aufkommen neuer Bilder")
     for t in imgTimeList[1:]:
-        ax.axvline(x=t, color="grey", linestyle="--", linewidth=1)
+        ax.axvline(x=t, color="#8a8b8a", linestyle="--", linewidth=1)
         
-    ax.step(imgTimeList, velYawList, where="post", markevery=2, marker="o", color="orange", label="Gemittelte Steuerbefehle")
-    ax.bar(cmdFullTimeList, velYawFullCmdList, color="green", width=0.005, label="Alle Steuerbefehle")
-    ax.legend()
+    ax.step(imgTimeList, velYawList, where="post", markevery=2, marker="o", markersize=4, color="orange", label="Gemittelte Steuerbefehle")
+    ax.bar(cmdFullTimeList, velYawFullCmdList, color="#85be48", width=0.005, label="Alle Steuerbefehle")
+    
+    # Shrink current axis's height by 10% on the bottom
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.3,
+                     box.width, box.height * 0.7])
+    
+    # Put a legend below current axis
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.2),
+              fancybox=True, shadow=True, ncol=1)
 
     plt.savefig('cmds.pdf')
         

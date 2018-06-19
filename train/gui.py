@@ -129,8 +129,7 @@ class ImgAndCmdWindow():
         
         if self.showInfo:
             self.svPath.set(imgPath)
-            seconds = float(thisImgAndCmdDict["fileName"][:10] + "." + thisImgAndCmdDict["fileName"][11:])
-            self.svDate.set(str(datetime.fromtimestamp(seconds)))
+            self.svDate.set(str(thisImgAndCmdDict["dateTime"]))
             self.svFrameNumber.set(str(self.frameNumber) + " of " + str(self.filteredImgAndCmdListLength))
         
         

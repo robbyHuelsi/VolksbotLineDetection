@@ -7,12 +7,16 @@ import tensorflow as tf
 from keras.utils import Sequence
 from PIL import Image
 import json
+from datetime import datetime
 from generateDataset import pillow_augmentations, gaussian_noise
+from turtledemo.penrose import star
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
-                         onlyUseSubfolder=None, roundNdigits=3, trashhold=0.01,
-                         filterZeros=False, predictionsFile=None, getFullCmdList=False):
+                         onlyUseSubfolder=None, roundNdigits=3,
+                         framesTimeTrashhold = None, cmdTrashhold=0.01,
+                         filterZeros=False, predictionsFile=None,
+                         getFullCmdList=False):
     
     '''
     onlyUseSubfolder:
@@ -56,52 +60,71 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
 
     imgsFolders = collections.OrderedDict(sorted(imgsFolders.items()))
 
-    for imgFolder, imgFiles in imgsFolders.items():
-        imgFiles = sorted(imgFiles)
-
+    for imgFolder, filesList in imgsFolders.items():
+        
+        # check is there a cmd file
         ibf = os.path.split(os.path.relpath(imgFolder, recordingsFolder))[0]
         csvFilePath = os.path.join(recordingsFolder, "cmd_vel_" + ibf + ".csv")
         if os.path.isfile(csvFilePath):
-            cmdDir = getCmdDir(csvFilePath)
-            countImgFiles = len(imgFiles)
-            for i in range(countImgFiles - 1):  # ...until last but one
-                thisFileName, thisFileExt = os.path.splitext(imgFiles[i])
-                if thisFileExt == ".jpg":
-                    nextFileName = ""
-                    if i + 1 <= countImgFiles:
-                        for j in range(i + 1, countImgFiles):
-                            nextFN, nextFE = os.path.splitext(imgFiles[j])
-                            if nextFE == ".jpg":
-                                nextFileName = nextFN
-                                break
-                    if nextFileName != "":
-                        inputDir = {}
+            
+            # convert cmd file in a list of cmds
+            cmdsListFromCSV = getCmdList(csvFilePath)
+            
+            # get list of images
+            imgsList = []
+            for f in filesList:
+                name, extension = os.path.splitext(f)
+                if extension == ".jpg":
+                    imgDir = {}
+                    imgDir["fileName"] = name
+                    imgDir["fileExt"] = extension
+                    timestamp = float(name) / 1000000000
+                    imgDir["timestamp"] = timestamp
+                    imgDir["dateTime"] = datetime.fromtimestamp(timestamp)
+                    imgsList.append(imgDir)
+            
+            # sort imgsList by timestamp
+            imgsList = sorted(imgsList, key=lambda k: k["fileName"])
+            
+            # frames time trashhold 
+            if framesTimeTrashhold and len(imgsList) > 0:
+                filteredImgsList = []
+                filteredImgsList.append(imgsList[0])
+                for imgDir in imgsList[1:]:
+                    diff = (imgDir["dateTime"] - filteredImgsList[-1]["dateTime"]).total_seconds()
+                    if diff > float(framesTimeTrashhold):
+                        filteredImgsList.append(imgDir)
+                imgsList = filteredImgsList
+            
+            # get comands and fill in inputList
+            for i, imgDir in enumerate(imgsList[:-1]):  # ...until last but one
+                inputDir = {}
+                if inputList and inputList[-1]["folderPath"] == imgFolder:
+                    lastVelX = inputList[-1]["velX"]
+                    lastVelYaw = inputList[-1]["velYaw"]
+                else:
+                    lastVelX = 0.0
+                    lastVelYaw = 0.0
 
-                        if inputList and inputList[-1]["folderPath"] == imgFolder:
-                            lastVelX = inputList[-1]["velX"]
-                            lastVelYaw = inputList[-1]["velYaw"]
-                        else:
-                            lastVelX = 0.0
-                            lastVelYaw = 0.0
+                velX, velYaw, filteredCmdList = calcCmds(cmdsListFromCSV,
+                                                         imgDir["timestamp"],
+                                                         imgsList[i+1]["timestamp"],
+                                                         lastVelX,
+                                                         lastVelYaw,
+                                                         roundNdigits=roundNdigits,
+                                                         cmdTrashhold=cmdTrashhold,
+                                                         printInfo=printInfo)
+                inputDir["folderPath"] = imgFolder
+                inputDir["fileName"] = imgDir["fileName"]
+                inputDir["fileExt"] = imgDir["fileExt"]
+                inputDir["dateTime"] = imgDir["dateTime"]
+                inputDir["velX"] = velX
+                inputDir["velYaw"] = velYaw
+                if getFullCmdList: inputDir["fullCmdList"] = filteredCmdList
+                inputList.append(inputDir)
 
-                        velX, velYaw, fullCmdList = calcCmds(cmdDir,
-                                                             thisFileName,
-                                                             nextFileName,
-                                                             lastVelX,
-                                                             lastVelYaw,
-                                                             roundNdigits=roundNdigits,
-                                                             trashhold=trashhold,
-                                                             printInfo=printInfo)
-                        inputDir["folderPath"] = imgFolder
-                        inputDir["fileName"] = thisFileName
-                        inputDir["fileExt"] = thisFileExt
-                        inputDir["velX"] = velX
-                        inputDir["velYaw"] = velYaw
-                        if getFullCmdList: inputDir["fullCmdList"] = fullCmdList
-                        inputList.append(inputDir)
-
-                        if printInfo:
-                            print(inputDir)
+                if printInfo:
+                    print(inputDir)
         else:
             print("!!! NOT FOUND: ", str(csvFilePath))
 
@@ -114,32 +137,32 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
         print("!!! NO INPUT")
 
 
-def getCmdDir(path):
+def getCmdList(path):
     reader = csv.reader(open(path, 'r'))
-    cmdDir = {}
+    cmdList = []
     for row in reader:
-        cmd = {}
-        cmd["valX"] = str(row[1])
-        cmd["valYaw"] = str(row[6])
-        timestamp = float(row[0])
-        cmdDir[timestamp] = cmd
-    return cmdDir
+        cmdDir = {}
+        cmdDir["velX"] = str(row[1])
+        cmdDir["velYaw"] = str(row[6])
+        cmdDir["timestamp"] = float(row[0])
+        dt = datetime.fromtimestamp(cmdDir["timestamp"])
+        cmdDir["dateTime"] = dt
+        cmdList.append(cmdDir)
+    return cmdList
 
 
-def calcCmds(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw,
-             roundNdigits=3, trashhold=0.0, printInfo=False):
-    startTimestamp = float(thisImgName) / 1000000000
-    endTimestamp = float(nextImgName) / 1000000000
+def calcCmds(cmdList, thisTimestamp, nextTimestamp, lastVelX, lastVelYaw,
+             roundNdigits=3, cmdTrashhold=0.0, printInfo=False):
     sumValX = 0
     sumValYaw = 0
     countCmds = 0
-    filteredCmdList = {}
-    for timestamp, cmd in cmdDir.items():
-        if timestamp >= startTimestamp and timestamp < endTimestamp:
+    filteredCmdList = []
+    for cmdDir in cmdList:
+        if cmdDir["timestamp"] >= thisTimestamp and cmdDir["timestamp"] < nextTimestamp:
             countCmds += 1
-            sumValX += float(cmd["valX"])
-            sumValYaw += float(cmd["valYaw"])
-            filteredCmdList[timestamp] = cmd
+            sumValX += float(cmdDir["velX"])
+            sumValYaw += float(cmdDir["velYaw"])
+            filteredCmdList.append(cmdDir)
             
     if countCmds > 0:
         avVelX = sumValX / countCmds
@@ -152,12 +175,12 @@ def calcCmds(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw,
         avVelX = round(avVelX, ndigits=roundNdigits)
         avVelYaw = round(avVelYaw, ndigits=roundNdigits)
 
-    if trashhold and trashhold >= 0.0:
-        avVelX = avVelX if abs(avVelX) > trashhold else 0.0
-        avVelYaw = avVelYaw if abs(avVelYaw) > trashhold else 0.0
+    if cmdTrashhold and cmdTrashhold >= 0.0:
+        avVelX = avVelX if abs(avVelX) > cmdTrashhold else 0.0
+        avVelYaw = avVelYaw if abs(avVelYaw) > cmdTrashhold else 0.0
 
     if printInfo:
-        print("Between ", str(startTimestamp), " and ", str(endTimestamp),
+        print("Between ", str(thisTimestamp), " and ", str(nextTimestamp),
               "is 1 command:" if countCmds == 1 else " are " + str(countCmds) + " commands:")
         print("av. velX:    ", str(avVelX))
         print("av. velYaw:  ", str(avVelYaw))
@@ -376,8 +399,10 @@ if __name__ == "__main__":
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
                                        "volksbot", "predictions.json")
     imgAndCmdList = getImgAndCommandList(recordingsFolder,
-                                             onlyUseSubfolder="left_rect",
-                                             filterZeros=False)
+                                         onlyUseSubfolder="left_rect",
+                                         framesTimeTrashhold=None,
+                                         filterZeros=False,
+                                         printInfo=True)
     # imgAndCommandList = addPredictionsToImgAndCommandList(imgAndCmdList,
     #                                                      predictionsJsonPath,
     #                                                      printInfo=True)

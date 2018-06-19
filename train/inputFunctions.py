@@ -12,7 +12,15 @@ from generateDataset import pillow_augmentations, gaussian_noise
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
                          onlyUseSubfolder=None, roundNdigits=3, trashhold=0.01,
-                         filterZeros=False, predictionsFile=None):
+                         filterZeros=False, predictionsFile=None, getFullCmdList=False):
+    
+    '''
+    onlyUseSubfolder:
+    - None:                Use all subfolders
+    - e.g. "subfolder":    Use only frames in the last subfolder "subfolder"
+    - e.g. "sub/folders":  Use only frames in the last two subfolders "sub/folders"
+    '''
+    
     print("Collecting from: {}".format(recordingsFolder))
     print("but only use subfolder: {}".format(onlyUseSubfolder))
     cmdVelFiles = []
@@ -27,10 +35,24 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
                     cmdVelFiles.append(fName)
         else:  # Alle unersen Ebenen
             if filenames:  # Nur wenn Dateien im Ordner
-                ibf = os.path.basename(os.path.normpath(directory))  # ibf=Imgage Base Folder
-                # print(ibf)
-                if not onlyUseSubfolder or onlyUseSubfolder == ibf:
+                if not onlyUseSubfolder:
                     imgsFolders[directory] = filenames
+                else:
+                    dsl = os.path.normpath(directory)  # ibf=directory splitted list
+                    dsl = dsl.split(os.sep)
+                    fsl = os.path.normpath(onlyUseSubfolder)  # fsl=onlyUseSubfolder (filter) splitted list
+                    fsl = fsl.split(os.sep)
+                    filteredSubpathList = dsl[-1*len(fsl):]
+                    filteredSubpath = os.path.join(*filteredSubpathList)
+                    #print(dsl)
+                    #print(fsl)
+                    #print(onlyUseSubfolder)
+                    #print(filteredSubpath)
+                    if onlyUseSubfolder == filteredSubpath:
+                        imgsFolders[directory] = filenames
+                        #print("added")
+                    #input()
+                    
 
     imgsFolders = collections.OrderedDict(sorted(imgsFolders.items()))
 
@@ -62,19 +84,20 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
                             lastVelX = 0.0
                             lastVelYaw = 0.0
 
-                        velX, velYaw = calcCmds(cmdDir,
-                                                thisFileName,
-                                                nextFileName,
-                                                lastVelX,
-                                                lastVelYaw,
-                                                roundNdigits=roundNdigits,
-                                                trashhold=trashhold,
-                                                printInfo=printInfo)
+                        velX, velYaw, fullCmdList = calcCmds(cmdDir,
+                                                             thisFileName,
+                                                             nextFileName,
+                                                             lastVelX,
+                                                             lastVelYaw,
+                                                             roundNdigits=roundNdigits,
+                                                             trashhold=trashhold,
+                                                             printInfo=printInfo)
                         inputDir["folderPath"] = imgFolder
                         inputDir["fileName"] = thisFileName
                         inputDir["fileExt"] = thisFileExt
                         inputDir["velX"] = velX
                         inputDir["velYaw"] = velYaw
+                        if getFullCmdList: inputDir["fullCmdList"] = fullCmdList
                         inputList.append(inputDir)
 
                         if printInfo:
@@ -110,12 +133,14 @@ def calcCmds(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw,
     sumValX = 0
     sumValYaw = 0
     countCmds = 0
+    filteredCmdList = {}
     for timestamp, cmd in cmdDir.items():
         if timestamp >= startTimestamp and timestamp < endTimestamp:
             countCmds += 1
             sumValX += float(cmd["valX"])
             sumValYaw += float(cmd["valYaw"])
-
+            filteredCmdList[timestamp] = cmd
+            
     if countCmds > 0:
         avVelX = sumValX / countCmds
         avVelYaw = sumValYaw / countCmds
@@ -137,7 +162,7 @@ def calcCmds(cmdDir, thisImgName, nextImgName, lastVelX, lastVelYaw,
         print("av. velX:    ", str(avVelX))
         print("av. velYaw:  ", str(avVelYaw))
 
-    return avVelX, avVelYaw
+    return avVelX, avVelYaw, filteredCmdList
 
 
 def getImgPathByImgAndCmdDict(imgAndCmdDict):

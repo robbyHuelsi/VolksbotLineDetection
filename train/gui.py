@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use("TkAgg")  # Must to be set before import matplotlib.pyplot or tkinter
+
 import os
 from tkinter import *
 from tkinter.ttk import *
@@ -8,8 +11,6 @@ import threading
 import numpy as np
 
 import inputFunctions as ifu
-import matplotlib
-matplotlib.use("TkAgg")  # Must to be set before import pyplot (inside of pfu)!!!
 import plotFunctions as pfu
 
 # View and Control

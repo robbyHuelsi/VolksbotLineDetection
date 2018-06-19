@@ -12,7 +12,7 @@ import inputFunctions as ifu
 
 def plotCmd(imgAndCmdList):
     start = 100
-    end = 125
+    end = 126
     
     # sort by dateTime
     #imgAndCmdList = sorted(imgAndCmdList, key=lambda k: k['dateTime'])
@@ -53,7 +53,7 @@ def plotCmd(imgAndCmdList):
     ax.xaxis.set_ticks_position('bottom')
     
     # limit view
-    ax.set_xlim(0, 1)
+    ax.set_xlim(0, 1.001)
     ax.set_ylim(0, 0.5)
     
     # y axis ticks
@@ -77,12 +77,12 @@ def plotCmd(imgAndCmdList):
             velYawFullCmdList.append(float(fullCmdDict["velYaw"]))
             #print("        - " + str(cmdTime) + ": " + str(fullCmdDict["velYaw"]))
     
-    ax.axvline(x=imgTimeList[0], color="#8a8b8a", linestyle=":", linewidth=1, label="Aufkommen neuer Bilder")
+    ax.axvline(x=imgTimeList[0], color="#8a8b8a", linestyle=":", linewidth=1, label="Aufzeichnungszeitpunkte Bilder")
     for t in imgTimeList[1:]:
         ax.axvline(x=t, color="#8a8b8a", linestyle="--", linewidth=1)
         
     ax.step(imgTimeList, velYawList, where="post", markevery=2, marker="o", markersize=4, color="orange", label="Gemittelte Steuerbefehle")
-    ax.bar(cmdFullTimeList, velYawFullCmdList, color="#85be48", width=0.005, label="Alle Steuerbefehle")
+    ax.bar(cmdFullTimeList, velYawFullCmdList, color="#85be48", width=0.005, label="Aufgezeichnete Steuerbefehle")
     
     # Shrink current axis's height by 10% on the bottom
     box = ax.get_position()

@@ -159,11 +159,13 @@ def calcCmds(cmdList, thisTimestamp, nextTimestamp, lastVelX, lastVelYaw,
     countCmds = 0
     filteredCmdList = []
     
-    # If image was token after last cmd, than return last cmd, else...
+    # If image was token after last cmd, than return zeros, else...
     if thisTimestamp > cmdList[-1]["timestamp"]:
-        if printInfo: print("image was token after last cmd")
-        sumValX = float(cmdList[-1]["velX"])
-        sumValYaw = float(cmdList[-1]["velYaw"])
+        if printInfo: print("!!! image was token after last cmd")
+        # sumValX = float(cmdList[-1]["velX"])
+        # sumValYaw = float(cmdList[-1]["velYaw"])
+        sumValX = 0.0
+        sumValYaw = 0.0
         countCmds = 1
         filteredCmdList.append(cmdList[-1])
     else:

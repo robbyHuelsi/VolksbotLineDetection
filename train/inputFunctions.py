@@ -153,16 +153,26 @@ def getCmdList(path):
 
 def calcCmds(cmdList, thisTimestamp, nextTimestamp, lastVelX, lastVelYaw,
              roundNdigits=3, cmdTrashhold=0.0, printInfo=False):
+    
     sumValX = 0
     sumValYaw = 0
     countCmds = 0
     filteredCmdList = []
-    for cmdDir in cmdList:
-        if cmdDir["timestamp"] >= thisTimestamp and cmdDir["timestamp"] < nextTimestamp:
-            countCmds += 1
-            sumValX += float(cmdDir["velX"])
-            sumValYaw += float(cmdDir["velYaw"])
-            filteredCmdList.append(cmdDir)
+    
+    # If image was token after last cmd, than return last cmd, else...
+    if thisTimestamp > cmdList[-1]["timestamp"]:
+        if printInfo: print("image was token after last cmd")
+        sumValX = float(cmdList[-1]["velX"])
+        sumValYaw = float(cmdList[-1]["velYaw"])
+        countCmds = 1
+        filteredCmdList.append(cmdList[-1])
+    else:
+        for cmdDir in cmdList:
+            if cmdDir["timestamp"] >= thisTimestamp and cmdDir["timestamp"] < nextTimestamp:
+                countCmds += 1
+                sumValX += float(cmdDir["velX"])
+                sumValYaw += float(cmdDir["velYaw"])
+                filteredCmdList.append(cmdDir)
             
     if countCmds > 0:
         avVelX = sumValX / countCmds
@@ -399,7 +409,7 @@ if __name__ == "__main__":
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
                                        "volksbot", "predictions.json")
     imgAndCmdList = getImgAndCommandList(recordingsFolder,
-                                         onlyUseSubfolder="left_rect",
+                                         onlyUseSubfolder="straight_lane_angle_move_left_2/left_rect",
                                          framesTimeTrashhold=None,
                                          filterZeros=False,
                                          printInfo=True)

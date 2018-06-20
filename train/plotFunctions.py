@@ -1,3 +1,4 @@
+import argparse
 import json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -6,29 +7,39 @@ from matplotlib import style
 from inputFunctions import getImgAndCommandList
 
 
-def plot_ref_pred_comparison(reference, predictions, filter=None):
+def plot_ref_pred_comparison(reference, predictions=None, filter=None):
     plt.figure()
     plt.title("Control command comparison")
 
     if filter is not None:
         plt.suptitle(filter)
       
-    # Filter datapoints without predictions   
-    predictions = [p if p != None else np.nan for p in predictions]
-    predictions = np.ma.array(predictions)
-    predictions = np.ma.masked_where(predictions == np.nan, predictions)
+    # Filter datapoints without predictions
+    if predictions is not None:
+        predictions = [p if p != None else np.nan for p in predictions]
+        predictions = np.ma.array(predictions)
+        predictions = np.ma.masked_where(predictions == np.nan, predictions)
 
     plt.subplot(211)
     plt.title("Yaw Velocity")
     plt.plot(range(len(reference)), reference, label="Reference", color='xkcd:orange', linewidth=2)
-    plt.plot(range(len(predictions)), predictions, label="Prediction", color='xkcd:sky blue', linewidth=2)
+
+    if predictions is not None:
+        plt.plot(range(len(predictions)), predictions, label="Prediction", color='xkcd:sky blue', linewidth=2)
+
     plt.grid(color='gray', linestyle='-', linewidth='1')
     plt.legend()
 
     plt.subplot(212)
-    both = np.concatenate([np.asmatrix(reference), np.asmatrix(predictions)], axis=0).transpose()
-    plt.hist(both, bins=11, orientation='vertical', histtype='bar', color=['xkcd:orange', 'xkcd:sky blue'],
-             label=["Reference", "Prediction"])
+
+    if predictions is not None:
+        both = np.concatenate([np.asmatrix(reference), np.asmatrix(predictions)], axis=0).transpose()
+        plt.hist(both, bins=11, orientation='vertical', histtype='bar', color=['xkcd:orange', 'xkcd:sky blue'],
+                label=["Reference", "Prediction"])
+    else:
+        plt.hist(reference, bins=11, orientation='vertical', histtype='bar', color='xkcd:orange',
+                 label=["Reference", "Prediction"])
+
     plt.legend()
 
     plt.show()
@@ -91,12 +102,12 @@ class PlotLearning(Callback):
 
 
 def main():
-    json_file = "/home/florian/Development/tmp/run/mobilenet_reg_v4/predictions.json"
+    #json_file = "/home/florian/Development/tmp/run/mobilenet_reg_v4/predictions.json"
 
-    with open(json_file) as f:
-        predictions = json.load(f)
+    #with open(json_file) as f:
+    #    predictions = json.load(f)
 
-    references = getImgAndCommandList("/home/florian/Development/tmp/data/train_lane",
+    references = getImgAndCommandList("/home/florian/Development/tmp/data/test_course_oldcfg",
                                       onlyUseSubfolder="left_rect", filterZeros=True)
 
     # Do some checks before merging the reference and prediction values
@@ -110,13 +121,16 @@ def main():
     #     p["refVelYaw"] = data[i]["velYaw"]
 
     # Do a subselection
-    uniq_folders = list(set([p["relFolderPath"] for p in predictions]))
-    filter = uniq_folders[3]
+    #uniq_folders = list(set([p["relFolderPath"] for p in predictions]))
+    #filter = uniq_folders[3]
 
-    refs = [r["velYaw"] for r in references if filter in r["folderPath"]]
-    preds = [p["predVelYaw"] for p in predictions if p["relFolderPath"] == filter]
+    refs = [r["velYaw"] for r in references]
 
-    plot_ref_pred_comparison(refs, preds, filter=filter)
+    #refs = [r["velYaw"] for r in references if filter in r["folderPath"]]
+    #preds = [p["predVelYaw"] for p in predictions if p["relFolderPath"] == filter]
+
+    #plot_ref_pred_comparison(refs, preds, filter=filter)
+    plot_ref_pred_comparison(refs, None, filter=filter)
 
 
 if __name__ == '__main__':

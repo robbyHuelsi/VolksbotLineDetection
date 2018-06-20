@@ -401,7 +401,7 @@ class ImgAndCmdWindow():
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
-                                    "volksbot", "data", "train_lane")
+                                    "Development", "tmp", "data", "train_lane")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
                                        "volksbot", "runs", "mobilenet_reg_lane_v3", "predictions.json")
     '''
@@ -411,7 +411,7 @@ if __name__ == "__main__":
 
     imgAndCmdList = ifu.getImgAndCommandList(recordingsFolder,
                                              onlyUseSubfolder="left_rect",
-                                             filterZeros=False)
+                                             filterZeros=True)
     imgAndCmdList = ifu.addPredictionsToImgAndCommandList(imgAndCmdList,
                                                           predictionsJsonPath,
                                                           roundNdigits=0)

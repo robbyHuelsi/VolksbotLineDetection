@@ -4,16 +4,12 @@ import glob
 import os
 import collections
 import csv
-from builtins import enumerate
-
 import numpy as np
 import tensorflow as tf
 from keras.utils import Sequence
 from PIL import Image
-import json
 from datetime import datetime
 from generateDataset import pillow_augmentations, gaussian_noise
-from turtledemo.penrose import star
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
@@ -155,17 +151,27 @@ def getCmdList(path):
 
 def calcCmds(cmdList, thisTimestamp, nextTimestamp, lastVelX, lastVelYaw,
              roundNdigits=3, cmdTrashhold=0.0, printInfo=False):
+
     sumValX = 0
     sumValYaw = 0
     countCmds = 0
     filteredCmdList = []
-    for cmdDir in cmdList:
-        if cmdDir["timestamp"] >= thisTimestamp and cmdDir["timestamp"] < nextTimestamp:
-            countCmds += 1
-            sumValX += float(cmdDir["velX"])
-            sumValYaw += float(cmdDir["velYaw"])
-            filteredCmdList.append(cmdDir)
 
+    # If image was token after last cmd, than return last cmd, else...
+    if thisTimestamp > cmdList[-1]["timestamp"]:
+        if printInfo: print("image was token after last cmd")
+        sumValX = float(cmdList[-1]["velX"])
+        sumValYaw = float(cmdList[-1]["velYaw"])
+        countCmds = 1
+        filteredCmdList.append(cmdList[-1])
+    else:
+        for cmdDir in cmdList:
+            if cmdDir["timestamp"] >= thisTimestamp and cmdDir["timestamp"] < nextTimestamp:
+                countCmds += 1
+                sumValX += float(cmdDir["velX"])
+                sumValYaw += float(cmdDir["velYaw"])
+                filteredCmdList.append(cmdDir)
+            
     if countCmds > 0:
         avVelX = sumValX / countCmds
         avVelYaw = sumValYaw / countCmds

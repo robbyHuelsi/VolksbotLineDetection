@@ -4,16 +4,12 @@ import glob
 import os
 import collections
 import csv
-from builtins import enumerate
-
 import numpy as np
 import tensorflow as tf
 from keras.utils import Sequence
 from PIL import Image
-import json
 from datetime import datetime
-from generateDataset import pillow_augmentations, gaussian_noise
-from turtledemo.penrose import star
+from generateDataset import pillow_augmentations, gaussian_noise, channel_wise_zero_mean
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
@@ -88,7 +84,7 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
             # sort imgsList by timestamp
             imgsList = sorted(imgsList, key=lambda k: k["fileName"])
 
-            # frames time trashhold 
+            # frames time trashhold
             if framesTimeTrashhold and len(imgsList) > 0:
                 filteredImgsList = []
                 filteredImgsList.append(imgsList[0])
@@ -338,6 +334,8 @@ class ImageBatchGenerator(Sequence):
 
         if self.augment:
             img = gaussian_noise(img)
+
+        #img = channel_wise_zero_mean(img)
 
         return img
 

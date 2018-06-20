@@ -1,10 +1,12 @@
 import argparse
 import json
+import os
+
 import numpy as np
 import matplotlib.pyplot as plt
 from keras.callbacks import Callback
 from matplotlib import style
-from inputFunctions import getImgAndCommandList
+from inputFunctions import for_subfolders_in
 
 
 def plot_ref_pred_comparison(reference, predictions=None, filter=None):
@@ -101,20 +103,28 @@ class PlotLearning(Callback):
             plt.show()
 
 
-def main():
-    #json_file = "/home/florian/Development/tmp/run/mobilenet_reg_v4/predictions.json"
+def plot_learning_curve():
+    pass
 
-    #with open(json_file) as f:
-    #    predictions = json.load(f)
 
-    references = getImgAndCommandList("/home/florian/Development/tmp/data/test_course_oldcfg",
-                                      onlyUseSubfolder="left_rect", filterZeros=True)
+def prepare_learning_curve_plot(args):
+    pass
 
-    # Do some checks before merging the reference and prediction values
-    # basenames = [p["fileName"] + p["fileExt"] for p in predictions]
-    # pred_vals = [p['predVelYaw'] for p in predictions]
-    # assert len(pred_vals) == len(ibg.labels)
-    # assert all(b == os.path.basename(f) for b, f in zip(basenames, ibg.features))
+
+def prepare_comparison_plot(args):
+    references = for_subfolders_in(os.path.join(args.data_dir, args.ref_dir), as_dict=False)
+    json_file = os.path.join(args.run_dir, args.session_dir, "predictions.json")
+    predictions = None
+
+    if os.path.exists(json_file):
+        with open(json_file) as f:
+            predictions = json.load(f)
+
+        # Do some checks before merging the reference and prediction values
+        basenames = [p["fileName"] + p["fileExt"] for p in predictions]
+        pred_vals = [p['predVelYaw'] for p in predictions]
+        assert len(pred_vals) == len(references), "Predictions and ground truth array has to be of same length!"
+        assert all(b == os.path.basename(f) for b, f in zip(basenames, references["img_paths"]))
 
     # Copy the reference values into the same
     # for i, p in enumerate(predictions):
@@ -124,14 +134,25 @@ def main():
     #uniq_folders = list(set([p["relFolderPath"] for p in predictions]))
     #filter = uniq_folders[3]
 
-    refs = [r["velYaw"] for r in references]
+    # refs = [r["velYaw"] for r in references]
 
     #refs = [r["velYaw"] for r in references if filter in r["folderPath"]]
     #preds = [p["predVelYaw"] for p in predictions if p["relFolderPath"] == filter]
 
     #plot_ref_pred_comparison(refs, preds, filter=filter)
-    plot_ref_pred_comparison(refs, None, filter=filter)
+    plot_ref_pred_comparison(refs["angular_z"], pred_vals, filter=filter)
 
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser("Plot the learning curve etc. for trained networks")
+    parser.add_argument("--method", action="store", type=str, default="comparison")
+    parser.add_argument("--data_dir", action="store", type=str, default="C:/Development/volksbot/autonomerVolksbot/data")
+    parser.add_argument("--run_dir", action="store", type=str, default="C:/Development/volksbot/autonomerVolksbot/run")
+    parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_reg_lane_v13")
+    parser.add_argument("--ref_dir", action="store", type=str, default="test_course")
+    args = parser.parse_args()
+
+    if args.method == "comparison":
+        prepare_comparison_plot(args)
+    elif args.method == "learning_curve":
+        prepare_learning_curve_plot(args)

@@ -151,16 +151,26 @@ def getCmdList(path):
 
 def calcCmds(cmdList, thisTimestamp, nextTimestamp, lastVelX, lastVelYaw,
              roundNdigits=3, cmdTrashhold=0.0, printInfo=False):
+
     sumValX = 0
     sumValYaw = 0
     countCmds = 0
     filteredCmdList = []
-    for cmdDir in cmdList:
-        if cmdDir["timestamp"] >= thisTimestamp and cmdDir["timestamp"] < nextTimestamp:
-            countCmds += 1
-            sumValX += float(cmdDir["velX"])
-            sumValYaw += float(cmdDir["velYaw"])
-            filteredCmdList.append(cmdDir)
+
+    # If image was token after last cmd, than return last cmd, else...
+    if thisTimestamp > cmdList[-1]["timestamp"]:
+        if printInfo: print("image was token after last cmd")
+        sumValX = float(cmdList[-1]["velX"])
+        sumValYaw = float(cmdList[-1]["velYaw"])
+        countCmds = 1
+        filteredCmdList.append(cmdList[-1])
+    else:
+        for cmdDir in cmdList:
+            if cmdDir["timestamp"] >= thisTimestamp and cmdDir["timestamp"] < nextTimestamp:
+                countCmds += 1
+                sumValX += float(cmdDir["velX"])
+                sumValYaw += float(cmdDir["velYaw"])
+                filteredCmdList.append(cmdDir)
 
     if countCmds > 0:
         avVelX = sumValX / countCmds
@@ -194,9 +204,8 @@ def getImgPathByImgAndCmdDict(imgAndCmdDict):
 
 def addPredictionsToImgAndCommandList(imgAndCommandList, predictionsJsonPath,
                                       roundNdigits=0, printInfo=False):
-    # with open(predictionsJsonPath) as f:
-    #    predictedCmdList = json.load(f)
-    predictedCmdList = imgAndCommandList
+    with open(predictionsJsonPath) as f:
+        predictedCmdList = json.load(f)
 
     if not predictedCmdList:
         print("!!! Loading json file for predicted cmd's failed!")
@@ -346,7 +355,7 @@ class ImageBatchGenerator(Sequence):
 
         # Generate data
         for i, img_path in enumerate(img_paths_batch):
-            x_batch[i,] = self.__std_preprocess_input(img_path)
+            x_batch[i, ] = self.__std_preprocess_input(img_path)
 
         return x_batch
 
@@ -388,24 +397,24 @@ def first(arr):
     return arr[0]
 
 
-def pick_between(ctrl_data, timestamp_start_ns, timestamp_end_ns, reduce_fn=np.max, max_delay=6e7):
+def pick_between(ctrl_data, timestamp_start_ns, timestamp_end_ns, reduce_fn=np.mean, max_delay=6e7):
     diff = timestamp_end_ns - timestamp_start_ns
     ctrl_timestamps_ns = np.asarray(ctrl_data[:, 0] * 1e9, dtype=int)
     ctrl_timestamps_rel_start = ctrl_timestamps_ns - timestamp_start_ns
     ctrl_timestamps_rel_end = ctrl_timestamps_ns - timestamp_end_ns
 
-    mask_rel_start = np.where(np.greater_equal(ctrl_timestamps_rel_start, 0), True, False)
-    mask_rel_end = np.where(np.greater(ctrl_timestamps_rel_end, 0), False, True)
-    mask = np.where(np.equal(mask_rel_start, mask_rel_end), True, False)
+    mask_rel_start = np.greater_equal(ctrl_timestamps_rel_start, 0)
+    mask_rel_end = np.less_equal(ctrl_timestamps_rel_end, 0)
+    mask = mask_rel_start & mask_rel_end
 
     if np.sum(mask) == 0 or diff > max_delay:
-        linear_x = 0.0
-        angular_z = 0.0
+        linear_x = None
+        angular_z = None
     else:
         linear_x = reduce_fn(ctrl_data[mask, 1])
         angular_z = reduce_fn(ctrl_data[mask, 6])
 
-    return [linear_x, angular_z, linear_x != 0.0 or angular_z != 0.0]
+    return [linear_x, angular_z, linear_x != 0.0 or angular_z != 0.0, linear_x is not None and angular_z is not None]
 
 
 def load_img_ctrl_pairs(data_dir, subdir, image_dir="left_rect", reduce_fn=np.mean, file_type="jpg", filter_zeros=True):
@@ -414,16 +423,26 @@ def load_img_ctrl_pairs(data_dir, subdir, image_dir="left_rect", reduce_fn=np.me
 
     # Convert img file name to integer timestamp, sort them and calculate start_time as well as timestamp differences
     img_timestamps_ns = np.asarray(sorted([int(os.path.splitext(os.path.basename(f))[0]) for f in img_paths]))
-    start_time_ns = img_timestamps_ns[0]
-    rel_ms = np.asarray([(t - start_time_ns) * 1e-6 for t in img_timestamps_ns])
-    diff_ms = rel_ms[1:] - rel_ms[:-1]
 
     # Load control data from csv
     ctrl_data = np.loadtxt(os.path.join(data_dir, "cmd_vel_{}.csv".format(subdir)), delimiter=",", dtype=float)
+    ctrl_start_ns = int(ctrl_data[0, 0] * 1e9)
+    ctrl_end_ns = int(ctrl_data[-1, 0] * 1e9)
+
+    # Pick controls according to the reduce function
     picked_ctrls = []
 
     for i in range(len(img_timestamps_ns) - 1):
-        picked_ctrls.append(pick_between(ctrl_data, img_timestamps_ns[i], img_timestamps_ns[i + 1], reduce_fn=reduce_fn))
+        current_ctrl = pick_between(ctrl_data, img_timestamps_ns[i], img_timestamps_ns[i + 1], reduce_fn=reduce_fn)
+
+        # In case fill missing is active and a ctrl value is missing
+        if not bool(current_ctrl[3]):
+            if len(picked_ctrls) > 0 and ctrl_start_ns <= img_timestamps_ns[i] <= ctrl_end_ns:
+                current_ctrl = picked_ctrls[-1]
+            else:
+                current_ctrl = [0.0, 0.0, float(not filter_zeros), 0.0]
+
+        picked_ctrls.append(current_ctrl)
 
     picked_ctrls = np.asarray(picked_ctrls)
     img_paths = img_paths[:-1]
@@ -432,12 +451,19 @@ def load_img_ctrl_pairs(data_dir, subdir, image_dir="left_rect", reduce_fn=np.me
         mask = np.asarray(picked_ctrls[:, 2], dtype=bool)
         picked_ctrls = picked_ctrls[mask, :]
         img_paths = img_paths[mask]
+        img_timestamps_ns = img_timestamps_ns[:-1]
+        img_timestamps_ns = img_timestamps_ns[mask]
 
-    return {"img_paths": img_paths, "linear_x": picked_ctrls[:, 0], "angular_z": picked_ctrls[:, 1]}
+    start_time_ns = img_timestamps_ns[0]
+    rel_ns = np.asarray([(t - start_time_ns) for t in img_timestamps_ns])
+    diff_ns = rel_ns[1:] - rel_ns[:-1]
+
+    return {"img_paths": img_paths, "linear_x": picked_ctrls[:, 0], "angular_z": picked_ctrls[:, 1],
+            "timestamps": img_timestamps_ns, "time_diff": diff_ns, "time_rel": rel_ns}
 
 
 def for_subfolders_in(data_dir, apply_fn, as_dict=True):
-    subdirs = [d.replace(data_dir, "").replace(os.sep, "") for d in glob.glob(os.path.join(data_dir, "*", ""))]
+    subdirs = [d.replace(data_dir, "").replace(os.path.sep, "") for d in glob.glob(os.path.join(data_dir, "*", ""))]
     result = {} if as_dict else []
 
     for subdir in subdirs:
@@ -464,16 +490,16 @@ if __name__ == "__main__":
     robert_ctrl_list = getImgAndCommandList("/home/florian/Development/tmp/data/train_lane",
                                             onlyUseSubfolder="left_rect",
                                             framesTimeTrashhold=None,
-                                            filterZeros=True,
+                                            filterZeros=False,
                                             printInfo=False)
-    robert_ctrl_list_filtered = [s for s in robert_ctrl_list if "straight_lane_angle_move_left_1" in s["folderPath"]]
+    robert_ctrl_list_filtered = [s for s in robert_ctrl_list if "straight_lane_fw_4" in s["folderPath"]]
     robert_timestamps_s = np.asarray([int(s["fileName"]) * 1e-9 for s in robert_ctrl_list_filtered])
     robert_angular_z = np.asarray([s["velYaw"] for s in robert_ctrl_list_filtered])
     robert_linear_x = np.asarray([s["velX"] for s in robert_ctrl_list_filtered])
 
     ####
     data_dir = "/home/florian/Development/tmp/data/train_lane"
-    folder = "straight_lane_angle_move_left_1"
+    folder = "straight_lane_fw_4"
     dirs = glob.glob(os.path.join(data_dir, "*", ""))
     image_dir = "left_rect"
 
@@ -485,15 +511,12 @@ if __name__ == "__main__":
     diff_ms = rel_ms[1:] - rel_ms[:-1]
 
     import matplotlib.pyplot as plt
-
     # plt.hist(diff_ms, bins=21)
     # plt.show()
 
     ctrl_data = np.loadtxt("/home/florian/Development/tmp/data/train_lane/cmd_vel_{}.csv".format(folder),
                            delimiter=",", dtype=float)
 
-    # print(start_time_ns * 1e-9)
-    # print(ctrl_data[0, 0])
 
     data_timestamps_s = (ctrl_data[:, 0] - (start_time_ns * 1e-9))
     robert_timestamps_s -= start_time_ns * 1e-9
@@ -501,23 +524,16 @@ if __name__ == "__main__":
     # GROUND TRUTH
     plt.plot(data_timestamps_s, ctrl_data[:, 6], label="$angular_z$", linewidth=2)
     plt.plot(data_timestamps_s, ctrl_data[:, 1], label="$linear_x$", linewidth=2)
-    plt.plot(data_timestamps_s, ctrl_data[:, 1] * (-4 * ctrl_data[:, 6]), label="$normed_z$", linewidth=2)
+    #plt.plot(data_timestamps_s, ctrl_data[:, 1] * (-4 * ctrl_data[:, 6]), label="$normed_z$", linewidth=2)
 
     # ROBERT
     plt.plot(robert_timestamps_s, robert_angular_z, label="Robert: $angular_z$", linewidth=3, linestyle="--")
     plt.plot(robert_timestamps_s, robert_linear_x, label="Robert: $angular_x$", linewidth=3, linestyle="--")
 
     # MEAN OR FIRST
-    ctrls = []
-
-    for i in range(len(img_timestamps_ns) - 1):
-        ctrls.append(pick_between(ctrl_data, img_timestamps_ns[i], img_timestamps_ns[i + 1], reduce_fn=np.mean))
-
-    ctrls = np.asarray(ctrls)
-    mask = np.asarray(ctrls[:, 2], dtype=bool)
-    img_timestamps_s = np.asarray((img_timestamps_ns - start_time_ns) * 1e-9)[:-1]
-    plt.scatter(img_timestamps_s[mask], ctrls[mask, 1], label="Nearest: $angular_z$", marker="x")
-    plt.scatter(img_timestamps_s[mask], ctrls[mask, 0], label="Nearest: $linear_x$", marker="o")
+    pairs = load_img_ctrl_pairs(data_dir, folder, reduce_fn=np.mean)
+    plt.scatter((pairs["timestamps"] - start_time_ns) * 1e-9, pairs["angular_z"], label="Nearest: $angular_z$", marker="x")
+    plt.scatter((pairs["timestamps"] - start_time_ns) * 1e-9, pairs["linear_x"], label="Nearest: $linear_x$", marker="o")
 
     #plt.xlim([6.8, 7.8])
     plt.legend()

@@ -1,4 +1,7 @@
 from __future__ import print_function
+
+import glob
+import json
 import os
 import collections
 import csv
@@ -6,25 +9,22 @@ import numpy as np
 import tensorflow as tf
 from keras.utils import Sequence
 from PIL import Image
-import json
 from datetime import datetime
-from generateDataset import pillow_augmentations, gaussian_noise
-from turtledemo.penrose import star
+from generateDataset import pillow_augmentations, gaussian_noise, channel_wise_zero_mean
 
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
                          onlyUseSubfolder=None, roundNdigits=3,
-                         framesTimeTrashhold = None, cmdTrashhold=0.01,
+                         framesTimeTrashhold=None, cmdTrashhold=0.01,
                          filterZeros=False,
                          getFullCmdList=False):
-    
     '''
     onlyUseSubfolder:
     - None:                Use all subfolders
     - e.g. "subfolder":    Use only frames in the last subfolder "subfolder"
     - e.g. "sub/folders":  Use only frames in the last two subfolders "sub/folders"
     '''
-    
+
     print("Collecting from: {}".format(recordingsFolder))
     print("but only use subfolder: {}".format(onlyUseSubfolder))
     cmdVelFiles = []
@@ -46,30 +46,29 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
                     dsl = dsl.split(os.sep)
                     fsl = os.path.normpath(onlyUseSubfolder)  # fsl=onlyUseSubfolder (filter) splitted list
                     fsl = fsl.split(os.sep)
-                    filteredSubpathList = dsl[-1*len(fsl):]
+                    filteredSubpathList = dsl[-1 * len(fsl):]
                     filteredSubpath = os.path.join(*filteredSubpathList)
-                    #print(dsl)
-                    #print(fsl)
-                    #print(onlyUseSubfolder)
-                    #print(filteredSubpath)
+                    # print(dsl)
+                    # print(fsl)
+                    # print(onlyUseSubfolder)
+                    # print(filteredSubpath)
                     if onlyUseSubfolder == filteredSubpath:
                         imgsFolders[directory] = filenames
-                        #print("added")
-                    #input()
-                    
+                        # print("added")
+                    # input()
 
     imgsFolders = collections.OrderedDict(sorted(imgsFolders.items()))
 
     for imgFolder, filesList in imgsFolders.items():
-        
+
         # check is there a cmd file
         ibf = os.path.split(os.path.relpath(imgFolder, recordingsFolder))[0]
         csvFilePath = os.path.join(recordingsFolder, "cmd_vel_" + ibf + ".csv")
         if os.path.isfile(csvFilePath):
-            
+
             # convert cmd file in a list of cmds
             cmdsListFromCSV = getCmdList(csvFilePath)
-            
+
             # get list of images
             imgsList = []
             for f in filesList:
@@ -82,11 +81,11 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
                     imgDir["timestamp"] = timestamp
                     imgDir["dateTime"] = datetime.fromtimestamp(timestamp)
                     imgsList.append(imgDir)
-            
+
             # sort imgsList by timestamp
             imgsList = sorted(imgsList, key=lambda k: k["fileName"])
-            
-            # frames time trashhold 
+
+            # frames time trashhold
             if framesTimeTrashhold and len(imgsList) > 0:
                 filteredImgsList = []
                 filteredImgsList.append(imgsList[0])
@@ -95,7 +94,7 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
                     if diff > float(framesTimeTrashhold):
                         filteredImgsList.append(imgDir)
                 imgsList = filteredImgsList
-            
+
             # get comands and fill in inputList
             for i, imgDir in enumerate(imgsList[:-1]):  # ...until last but one
                 inputDir = {}
@@ -108,7 +107,7 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
 
                 velX, velYaw, filteredCmdList = calcCmds(cmdsListFromCSV,
                                                          imgDir["timestamp"],
-                                                         imgsList[i+1]["timestamp"],
+                                                         imgsList[i + 1]["timestamp"],
                                                          lastVelX,
                                                          lastVelYaw,
                                                          roundNdigits=roundNdigits,
@@ -153,7 +152,7 @@ def getCmdList(path):
 
 def calcCmds(cmdList, thisTimestamp, nextTimestamp, lastVelX, lastVelYaw,
              roundNdigits=3, cmdTrashhold=0.0, printInfo=False):
-    
+
     sumValX = 0
     sumValYaw = 0
     countCmds = 0
@@ -175,7 +174,7 @@ def calcCmds(cmdList, thisTimestamp, nextTimestamp, lastVelX, lastVelYaw,
                 sumValX += float(cmdDir["velX"])
                 sumValYaw += float(cmdDir["velYaw"])
                 filteredCmdList.append(cmdDir)
-            
+
     if countCmds > 0:
         avVelX = sumValX / countCmds
         avVelYaw = sumValYaw / countCmds
@@ -291,7 +290,7 @@ class ImageBatchGenerator(Sequence):
                 data_list += getImgAndCommandList(os.path.join(dir, sub_dir), onlyUseSubfolder=image_type,
                                                   filterZeros=True)
 
-        if data_list is None:
+        if len(data_list) == 0:
             tf.logging.warning("No images found in {}!".format(dir))
         else:
             self._img_paths = [getImgPathByImgAndCmdDict(sample) for sample in data_list]
@@ -359,6 +358,8 @@ class ImageBatchGenerator(Sequence):
 
         if self.augment:
             img = gaussian_noise(img)
+
+        #img = channel_wise_zero_mean(img)
 
         return img
 

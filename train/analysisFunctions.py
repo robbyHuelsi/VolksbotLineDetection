@@ -79,6 +79,16 @@ def plot_actv(actv, img=None, actv_fn=None, block=False):
     plt.show(block=block)
 
 
+def kernel_statistics(model, layer_names=[]):
+    data_table = []
+
+    for layer_name in layer_names:
+        for w in model.get_layer(layer_name).get_weights():
+            data_table.append([layer_name, w.shape, np.mean(w), np.std(w)])
+
+    return data_table, ["Layer", "Shape", "Mean", "Std"]
+
+
 def relu6(np_arr):
     return np.minimum(np.maximum(np_arr, np.zeros_like(np_arr)), np.ones_like(np_arr) * 6.0)
 

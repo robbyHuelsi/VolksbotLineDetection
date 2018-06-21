@@ -37,24 +37,3 @@ def save_predictions(img_paths, predictions, json_path):
     if predictions_list:
         with open(json_path, 'w') as fp:
             json.dump(predictions_list, fp)
-
-
-def invert_yaw(csv_file):
-    data = np.loadtxt(csv_file, delimiter=',', dtype='float32')
-    data[:, 6] = data[:, 6] * (-1)
-
-    path, ext = os.path.splitext(csv_file)
-    np.savetxt('{}_inv{}'.format(path, ext), data, delimiter=',')
-
-
-def invert_yaw_in_dir(directory):
-    csv_files = glob.glob(os.path.join(directory, '*.csv'))
-
-    for csv_file in csv_files:
-        if not csv_file.endswith("_inv.csv"):
-            print("Invert yaw values in '{}'".format(os.path.basename(csv_file)))
-            invert_yaw(csv_file)
-
-
-if __name__ == '__main__':
-    invert_yaw_in_dir("/home/florian/Development/tmp/data/train_lane")

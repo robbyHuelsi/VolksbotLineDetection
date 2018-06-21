@@ -86,7 +86,7 @@ def build_model(model_file, args=None, for_training=True):
     # or restore the model from hdf5 file
     if model_file:  # and os.path.exists(os.path.join("models", "{}.py".format(model_file))):
         # Import the model from a python module/code
-        if __package__ is None:
+        if __package__ is None or __package__ == '':
             module = importlib.import_module("models.{}".format(model_file))
         else:
             module = importlib.import_module("{}.models.{}".format(__package__, model_file))

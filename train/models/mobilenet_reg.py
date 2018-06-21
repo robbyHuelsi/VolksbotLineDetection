@@ -19,7 +19,7 @@ class MobileNetReg(HelperAPI):
         input_shape = (224, 224, 3)
         input_tensor = Input(input_shape)
 
-        mobnet_basic = MobileNet(weights=None, include_top=False, input_shape=input_shape, input_tensor=input_tensor)
+        mobnet_basic = MobileNet(include_top=False, input_shape=input_shape, input_tensor=input_tensor)
 
         if for_training and args.train_dense_only:
             # Disable training for the convolutional layers

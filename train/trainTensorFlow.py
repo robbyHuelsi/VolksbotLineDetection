@@ -8,12 +8,11 @@ import numpy as np
 import argparse
 
 from inputFunctions import ImageBatchGenerator
-from outputFunctions import save_arguments, save_predictions
+from outputFunctions import save_arguments, save_predictions, avoid_override
 from plotFunctions import PlotLearning
 from keras.callbacks import ModelCheckpoint, EarlyStopping
 from keras.models import load_model
 import keras.applications.mobilenet as mobilenet
-from tabulate import tabulate
 
 parser = argparse.ArgumentParser(description='Train and predict on different models')
 
@@ -29,8 +28,6 @@ parser.add_argument("--patience", action="store", default=2, type=int,
                     help="Number of epochs to wait for validation loss/accuracy to change.")
 parser.add_argument("--plot_progress", action="store", default=1, type=int,
                     help="Whether or not to plot the learning progress during training.")
-parser.add_argument("--show_summary", action="store", default=0, type=int,
-                    help="Whether or not to show the model summary before training.")
 parser.add_argument("--augment", action="store", default=0, type=int,
                     help="Whether or not to augment the training data.")
 parser.add_argument("--epochs", action="store", default=10, type=int,
@@ -41,6 +38,8 @@ parser.add_argument("--learning_rate", action="store", default=1e-5, type=float,
                     help="Learning rate of the specified optimizer.")
 parser.add_argument("--decay_rate", action="store", default=5e-6, type=float,
                     help="Decay the learning rate by this value after one epoch.")
+parser.add_argument("--pretrained", action="store", default=1, type=int,
+                    help="If the network should use weights from pretraining.")
 
 # Session specific directories, paths and files
 parser.add_argument("--session_name", action="store", default=str(datetime.datetime.now()).
@@ -52,6 +51,14 @@ parser.add_argument("--restore_file", action="store", default=None, type=str,
                     help="Path to the file with weights that should be restored.")
 parser.add_argument("--save_file", action="store", default="checkpoint.hdf5", type=str,
                     help="Name of the file where the model and weights get saved.")
+parser.add_argument("--show_summary", action="store", default=0, type=int,
+                    help="Whether or not to show the model summary before training.")
+parser.add_argument("--save_plot", action="store", default=1, type=int,
+                    help="Whether the plot should be saved after every epoch as 'learning_curve.pdf'.")
+parser.add_argument("--save_values", action="store", default=1, type=int,
+                    help="Whether the train/val loss and metric values should be saved to 'learning_curve.csv'.")
+parser.add_argument("--description", action="store", default="", type=str,
+                    help="Document other changes here that are not tracked by arguments.")
 
 # Dataset specific parameters
 parser.add_argument("--data_dir", action="store", default=os.path.join(
@@ -155,8 +162,11 @@ def main(args):
         model.summary()
 
     # Output for TensorBoard and model file will be inside args.tb_dir
-    save_dir = os.path.join(args.run_dir, "{}_{}".format(model.name, args.session_name))
+    run_name = "{}_{}".format(model.name, args.session_name)
+    save_dir = os.path.join(args.run_dir, run_name)
     save_file = os.path.join(save_dir, args.save_file)
+    plot_output_file = avoid_override(os.path.join(save_dir, "learning_curve.pdf")) if args.save_plot else None
+    val_output_file = avoid_override(os.path.join(save_dir, "learning_curve.csv")) if args.save_values else None
 
     # Create a model specific directory where the weights are saved
     if not os.path.isdir(save_dir):
@@ -177,7 +187,7 @@ def main(args):
                                                    "weights_{epoch:02d}_{" + helper.monitor_val() + ":.2f}.hdf5"),
                                       monitor=helper.monitor_val(), verbose=1, save_best_only=False,
                                       save_weights_only=True, mode=helper.monitor_mode(), period=1)]
-        callbacks += [PlotLearning()] if args.plot_progress else []
+        callbacks += [PlotLearning(run_name, args.plot_progress, plot_output_file, val_output_file)]
         callbacks += [EarlyStopping(monitor=helper.monitor_val(), patience=args.patience, verbose=1,
                                     mode=helper.monitor_mode())] if args.stop_early else []
 

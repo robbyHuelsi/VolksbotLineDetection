@@ -1,7 +1,7 @@
-import glob
 import json
 import os
-import numpy as np
+import datetime
+import tensorflow as tf
 
 
 def save_arguments(argument_file, args):
@@ -37,3 +37,30 @@ def save_predictions(img_paths, predictions, json_path):
     if predictions_list:
         with open(json_path, 'w') as fp:
             json.dump(predictions_list, fp)
+
+
+def join_path(parts, none_check=True):
+    return None if None in parts and none_check else os.path.join(*parts)
+
+
+def avoid_override(file_path, prefix_timestamp=True):
+    if os.path.exists(file_path):
+        basename = os.path.basename(file_path)
+
+        if prefix_timestamp:
+            timestamp = str(datetime.datetime.now()).replace(" ", "_").replace(":", "-")[:-7]
+            new_basename = "{}_{}".format(timestamp, basename)
+            new_path = file_path.replace(basename, new_basename)
+            tf.logging.warning("File '{}' already exists, new file named '{}' to avoid override!".format(basename,
+                                                                                                         new_basename))
+        else:
+            bak_path = file_path + ".bak"
+            bak_basename = os.path.basename(bak_path)
+            new_path = file_path
+            os.rename(file_path, bak_basename)
+            tf.logging.warning("File '{}' already exists, backed it up as '{}' to avoid override!".format(basename,
+                                                                                                          bak_basename))
+
+        return new_path
+    else:
+        return file_path

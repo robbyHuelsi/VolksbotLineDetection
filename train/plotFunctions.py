@@ -3,18 +3,15 @@ import glob
 import importlib
 import json
 import os
-
 import matplotlib
 import progressbar
-import csv
-
 import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow as tf
 from keras.callbacks import Callback
 from matplotlib import style
 from tabulate import tabulate
-
-from inputFunctions import for_subfolders_in, load_img_ctrl_pairs, ImageBatchGenerator
+from inputFunctions import ImageBatchGenerator, getImgAndCommandList
 
 
 def plot_ref_pred_comparison(reference, predictions=None, filter=None):
@@ -56,12 +53,16 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None):
 
 
 class PlotLearning(Callback):
-    def __init__(self):
+    def __init__(self, run_name, show_progress=True, plot_output_file=None, val_output_file=None):
         self.x = []
         self.values = {}
         style.use('ggplot')
         self.fig = None
         self.ax = None
+        self.run_name = run_name
+        self.plot_output_file = plot_output_file
+        self.val_output_file = val_output_file
+        self.show_progress = show_progress
 
     def on_train_begin(self, logs=None):
         self.fig = plt.figure()
@@ -80,7 +81,8 @@ class PlotLearning(Callback):
 
     def replot(self):
         self.ax.clear()
-        self.ax.set_title("Loss History")
+        self.ax.set_title("Loss/Metric Training History")
+        plt.suptitle('Run: {}'.format(self.run_name))
 
         num_metrics = len(self.values.keys())
         cmap = plt.get_cmap('gnuplot')
@@ -91,23 +93,42 @@ class PlotLearning(Callback):
             self.ax.plot(self.x, self.values[metric], label=metric, color=color, linewidth=2, linestyle=linestyle)
 
         self.ax.legend()
+        self.ax.set_xlabel("Epochs")
+        self.ax.set_ylabel("Value")
         self.ax.grid(True)
 
         plt.figure(self.fig.number)
-        plt.show(block=False)
-        plt.draw()
-        self.fig.canvas.draw()
-        self.fig.canvas.flush_events()
 
     def on_epoch_end(self, epoch, logs=None):
         super(PlotLearning, self).on_epoch_end(epoch, logs)
         self.append(epoch, logs)
 
         if len(self.x) > 0:
-            self.replot()
+            if self.val_output_file is not None:
+                data_table = [(self.run_name, self.x[i], *[v[i] for v in self.values.values()]) for i in
+                              range(len(self.x))]
+                data_arr = np.asarray(data_table, dtype=[("run", "<U128"), ("epoch", int)] +
+                                                        [(k, float) for k in self.values.keys()])
+                np.savetxt(self.val_output_file, data_arr, fmt=['%s', '%d'] + ['%f'] * len(list(self.values.keys())),
+                           delimiter=",", header="run,epoch," + ",".join(list(self.values.keys())), encoding="utf8")
+
+            if self.show_progress or self.plot_output_file is not None:
+                self.replot()
+
+            if self.plot_output_file is not None:
+                self.fig.savefig(self.plot_output_file, dpi=100)
+
+            if self.show_progress:
+                plt.show(block=False)
+                plt.draw()
+
+            self.fig.canvas.draw()
+            self.fig.canvas.flush_events()
+        else:
+            tf.logging.warning("Something seems to be wrong with class 'PlotLearning' during training!")
 
     def on_train_end(self, logs=None):
-        if len(self.x) > 0:
+        if len(self.x) > 0 and self.show_progress:
             plt.show()
 
 
@@ -144,7 +165,6 @@ def plot_learning_curve(data_table, show_plot=True, fig_path=None):
 
     if show_plot:
         plt.show()
-
 
 
 def prepare_learning_curve_plot(args):
@@ -195,16 +215,21 @@ def prepare_learning_curve_plot(args):
 
 
 def prepare_comparison_plot(args):
-    ref_dict = for_subfolders_in(os.path.join(args.data_dir, args.ref_dir), apply_fn=load_img_ctrl_pairs)
+    ref_dict = getImgAndCommandList(os.path.join(args.data_dir, args.ref_dir), onlyUseSubfolder="left_rect",
+                                    filterZeros=True)
+
+    folders = list(set([os.path.basename(os.path.split(r["folderPath"])[-2]) for r in ref_dict]))
 
     print("Select one: ")
-    for i, subfolder in enumerate(ref_dict.keys()):
+    for i, subfolder in enumerate(folders):
         print("{}) {}".format(i + 1, subfolder))
 
     selection = input()
-    filter = list(ref_dict.keys())[int(selection.strip()) - 1]
+    filter = folders[int(selection.strip()) - 1]
     json_file = os.path.join(args.run_dir, args.session_dir, "predictions.json")
-    predictions = None
+    ref_vals = [r["velYaw"] for r in ref_dict if filter in r["folderPath"]]
+    ref_basenames = [r["fileName"] + r["fileExt"] for r in ref_dict if filter in r["folderPath"]]
+    pred_vals = None
 
     if os.path.exists(json_file):
         with open(json_file) as f:
@@ -213,13 +238,10 @@ def prepare_comparison_plot(args):
         # Do some checks before merging the reference and prediction values
         basenames = [p["fileName"] + p["fileExt"] for p in predictions if filter in p["relFolderPath"]]
         pred_vals = [p['predVelYaw'] for p in predictions if filter in p["relFolderPath"]]
-        assert len(pred_vals) == len(ref_dict[filter]["img_paths"]), "Predictions and ground truth have " \
-                                                                     "to be of same length!"
-        assert all(b == os.path.basename(f) for b, f in zip(basenames, ref_dict[filter]["img_paths"]))
+        assert len(pred_vals) == len(ref_vals), "Predictions and ground truth have to be of same length!"
+        assert all(b == os.path.basename(f) for b, f in zip(basenames, ref_basenames))
 
-        predictions = pred_vals
-
-    plot_ref_pred_comparison(ref_dict[filter]["angular_z"], predictions, filter=filter)
+    plot_ref_pred_comparison(ref_vals, pred_vals, filter=filter)
 
 
 if __name__ == '__main__':

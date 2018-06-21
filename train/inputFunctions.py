@@ -265,7 +265,7 @@ class ImageBatchGenerator(Sequence):
 
     def __init__(self, dir, batch_size=32, dim=(224, 224), n_channels=3, shuffle=True, image_type="left_rect",
                  preprocess_input=None, preprocess_target=None, labeled=True, crop=True, take_or_skip=0,
-                 multi_dir=None, augment=0, encode_time=False):
+                 multi_dir=None, augment=0):
         """Initialization"""
         self.dir = dir
         self.dim = dim
@@ -278,15 +278,13 @@ class ImageBatchGenerator(Sequence):
         self.augment = augment
         self._img_ctrl_pairs = []
 
-        assert take_or_skip != 0 and not encode_time
-
         if multi_dir is None:
-            self.img_ctrl_pairs = for_subfolders_in(dir, load_img_ctrl_pairs, as_dict=False)
+            self._img_ctrl_pairs = for_subfolders_in(dir, load_img_ctrl_pairs, as_dict=False)
         else:
             for sub_dir in multi_dir:
-                self.img_ctrl_pairs += for_subfolders_in(os.path.join(dir, sub_dir), load_img_ctrl_pairs, as_dict=False)
+                self._img_ctrl_pairs += for_subfolders_in(os.path.join(dir, sub_dir), load_img_ctrl_pairs, as_dict=False)
 
-        if len(self.img_ctrl_pairs) == 0:
+        if len(self._img_ctrl_pairs) == 0:
             tf.logging.warning("No images found in {}!".format(dir))
         else:
             if take_or_skip > 0:
@@ -294,7 +292,9 @@ class ImageBatchGenerator(Sequence):
             elif take_or_skip < 0:
                 self._img_ctrl_pairs = [p for i, p in enumerate(self._img_ctrl_pairs) if i % abs(take_or_skip) != 0]
 
+        self.n_samples = len(self._img_ctrl_pairs)
         self.n_channels = n_channels
+        self.n_steps = int(np.floor(self.n_samples / self.batch_size))
         self.shuffle = shuffle
         self.indexes = np.arange(len(self._img_ctrl_pairs))
 
@@ -302,7 +302,7 @@ class ImageBatchGenerator(Sequence):
 
     def __len__(self):
         """ Denotes the number of batches per epoch """
-        return int(np.floor(len(self._img_ctrl_pairs) / self.batch_size))
+        return self.n_steps
 
     def __getitem__(self, index):
         """ Generate one batch of data """
@@ -310,10 +310,10 @@ class ImageBatchGenerator(Sequence):
         indexes = self.indexes[index * self.batch_size:(index + 1) * self.batch_size]
 
         # Select image paths and labels with these indexes and load them
-        x_batch = self.__data_generation([self._img_ctrl_pairs[k] for k in indexes])
+        x_batch = self.__data_generation([self.features[k] for k in indexes])
 
         if self.labeled:
-            y_batch = [self._labels[k] for k in indexes]
+            y_batch = np.asarray([self.labels[k] for k in indexes])
 
             # If the target value also has to be preprocessed then do it now
             if self.preprocess_target_fn is not None:
@@ -400,7 +400,7 @@ def first(arr):
 
 def pick_between(ctrl_data, timestamp_start_ns, timestamp_end_ns, reduce_fn=np.mean, max_delay=6e7):
     diff = timestamp_end_ns - timestamp_start_ns
-    ctrl_timestamps_ns = np.asarray(ctrl_data[:, 0] * 1e9, dtype=int)
+    ctrl_timestamps_ns = np.asarray(ctrl_data[:, 0] * 1e9, dtype=np.int64)
     ctrl_timestamps_rel_start = ctrl_timestamps_ns - timestamp_start_ns
     ctrl_timestamps_rel_end = ctrl_timestamps_ns - timestamp_end_ns
 
@@ -455,9 +455,13 @@ def load_img_ctrl_pairs(data_dir, subdir, image_dir="left_rect", reduce_fn=np.me
         img_timestamps_ns = img_timestamps_ns[:-1]
         img_timestamps_ns = img_timestamps_ns[mask]
 
-    start_time_ns = img_timestamps_ns[0]
-    rel_ns = np.asarray([(t - start_time_ns) for t in img_timestamps_ns])
-    diff_ns = rel_ns[1:] - rel_ns[:-1]
+    if len(img_timestamps_ns) > 0:
+        start_time_ns = img_timestamps_ns[0]
+        rel_ns = np.asarray([(t - start_time_ns) for t in img_timestamps_ns])
+        diff_ns = rel_ns[1:] - rel_ns[:-1]
+    else:
+        rel_ns = []
+        diff_ns = []
 
     return {"img_paths": img_paths, "linear_x": picked_ctrls[:, 0], "angular_z": picked_ctrls[:, 1],
             "timestamps": img_timestamps_ns, "time_diff": diff_ns, "time_rel": rel_ns}
@@ -517,7 +521,6 @@ if __name__ == "__main__":
 
     ctrl_data = np.loadtxt("/home/florian/Development/tmp/data/train_lane/cmd_vel_{}.csv".format(folder),
                            delimiter=",", dtype=float)
-
 
     data_timestamps_s = (ctrl_data[:, 0] - (start_time_ns * 1e-9))
     robert_timestamps_s -= start_time_ns * 1e-9

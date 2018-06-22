@@ -8,18 +8,23 @@ import progressbar
 import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
+import itertools
 from keras.callbacks import Callback
 from matplotlib import style
 from tabulate import tabulate
 from inputFunctions import ImageBatchGenerator, getImgAndCommandList
 
 
-def plot_ref_pred_comparison(reference, predictions=None, filter=None):
-    plt.figure()
-    plt.title("Control command comparison")
+color = {"green":  "#85be48", "gray": "#8a8b8a", "orange": "#ffa500", "light_orange": "#ffe0b5",
+         "blue": "#0fa3b1", "pink": "#6b2d5c"}
+cc = itertools.cycle(color.values())
 
-    if filter is not None:
-        plt.suptitle(filter)
+
+def plot_ref_pred_comparison(reference, predictions=None, filter=None):
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(3.5, 4.5))
+
+    # if filter is not None:
+    #     plt.suptitle(filter)
 
     # Filter datapoints without predictions
     if predictions is not None:
@@ -27,28 +32,51 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None):
         predictions = np.ma.array(predictions)
         predictions = np.ma.masked_where(predictions == np.nan, predictions)
 
-    plt.subplot(211)
-    plt.title("Yaw Velocity")
-    plt.plot(range(len(reference)), reference, label="Reference", color='xkcd:orange', linewidth=2)
+    ax1.set_title("Vergleich der Steuerbefehle")
+    ax1.plot(range(len(reference)), reference, label="Referenz", color=color["orange"], linewidth=2, marker=None)
 
     if predictions is not None:
-        plt.plot(range(len(predictions)), predictions, label="Prediction", color='xkcd:sky blue', linewidth=2)
+        ax1.plot(range(len(predictions)), predictions, label="Vorhersage", color=color["blue"], linewidth=2)
 
-    plt.grid(color='gray', linestyle='-', linewidth='1')
-    plt.legend()
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    vals = ax1.get_yticks()
+    vals = [str(int(x*100)) for x in vals]
+    ax1.set_yticklabels(vals)
+    ax1.set_ylabel("Drehgeschwindigkeit [%]")
+    ax1.set_xlabel("Bild [nr.]")
+    #ax1.set_xlim([0.0, 250.0])
+    ax1.legend(fancybox=True, shadow=True, ncol=1, loc='lower center', bbox_to_anchor=(0.5, 1.5))
+    ax1.grid(color=color["gray"], linestyle='-', linewidth='1')
 
-    plt.subplot(212)
+    # Plot histogram of controls
+    ax2.set_title("Steuerbefehl-Histogramm")
+
+    bins = np.arange(-1.05, 1.06, 0.1)
+    ticks = [-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 
     if predictions is not None:
-        both = np.concatenate([np.asmatrix(reference), np.asmatrix(predictions)], axis=0).transpose()
-        plt.hist(both, bins=11, orientation='vertical', histtype='bar', color=['xkcd:orange', 'xkcd:sky blue'],
-                 label=["Reference", "Prediction"])
+        both = np.concatenate([np.asmatrix(predictions), np.asmatrix(reference)], axis=0).transpose()
+        ax2.hist(both[0:251, :], bins=bins, orientation='vertical', histtype='step', color=[color["blue"], color["orange"]],
+                 label=["Vorhersage", "Referenz"], linewidth=2)
     else:
-        plt.hist(reference, bins=11, orientation='vertical', histtype='bar', color='xkcd:orange',
-                 label=["Reference", "Prediction"])
+        ax2.hist(reference, bins=bins, orientation='vertical', histtype='step', color=color["orange"],
+                 label="Referenz", linewidth=2)
 
-    plt.legend()
+    ax2.spines['right'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.set_xticks(ticks)
+    vals = ax2.get_xticks()
+    vals = [str(int(x * 100)) for x in vals]
+    ax2.set_xticklabels(vals)
+    #ax2.set_xlim([-0.3, 0.7])
+    ax2.set_ylabel("Anzahl")
+    ax2.set_xlabel("Drehgeschwindigkeit [%]")
+    ax2.grid(color=color["gray"], linestyle='-', linewidth='1')
+    #ax2.legend(fancybox=True, shadow=True, ncol=1)
 
+    fig.tight_layout()
+    fig.savefig("../documentation/comp.pdf")
     plt.show()
 
 
@@ -87,10 +115,12 @@ class PlotLearning(Callback):
         num_metrics = len(self.values.keys())
         cmap = plt.get_cmap('gnuplot')
         colors = [cmap(i) for i in np.linspace(0.2, 0.8, num_metrics)]
+        marker = None if len(self.x) > 1 else "x"
 
         for metric, color in zip(self.values.keys(), colors):
             linestyle = "--" if "val" in metric else "-"
-            self.ax.plot(self.x, self.values[metric], label=metric, color=color, linewidth=2, linestyle=linestyle)
+            self.ax.plot(self.x, self.values[metric], label=metric, color=color, linewidth=2, linestyle=linestyle,
+                         marker=marker)
 
         self.ax.legend()
         self.ax.set_xlabel("Epochs")
@@ -218,7 +248,7 @@ def prepare_comparison_plot(args):
     ref_dict = getImgAndCommandList(os.path.join(args.data_dir, args.ref_dir), onlyUseSubfolder="left_rect",
                                     filterZeros=True)
 
-    folders = list(set([os.path.basename(os.path.split(r["folderPath"])[-2]) for r in ref_dict]))
+    folders = sorted(list(set([os.path.basename(os.path.split(r["folderPath"])[-2]) for r in ref_dict])))
 
     print("Select one: ")
     for i, subfolder in enumerate(folders):

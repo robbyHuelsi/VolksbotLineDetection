@@ -86,11 +86,11 @@ def getVelYawClas(avVelYaw, minYaw=-0.5, maxYaw=0.5, classes=9):	###############
     if 3 * minYaw / 4 <= avVelYaw < 2 * minYaw / 4:	velYawClass = 1
     if 2 * minYaw / 4 <= avVelYaw < minYaw / 4:		velYawClass = 2
     if minYaw / 4 <= avVelYaw < -0.001:				velYawClass = 3
-    if -0.001 <= avVelYaw < 0.001:					velYawClass = 4
-    if 0.001 <= avVelYaw < maxYaw / 4:				velYawClass = 5
-    if maxYaw / 4 <= avVelYaw < maxYaw / 4:			velYawClass = 6
-    if 2 * maxYaw / 4 <= avVelYaw < maxYaw / 4:		velYawClass = 7
-    if 3 * maxYaw / 4 <= avVelYaw < maxYaw:			velYawClass = 8
+    if -0.001 <= avVelYaw <= 0.001:					velYawClass = 4
+    if 0.001 < avVelYaw <= maxYaw / 4:				velYawClass = 5
+    if maxYaw / 4 < avVelYaw <= 2 * maxYaw / 4:		velYawClass = 6
+    if 2 * maxYaw / 4 < avVelYaw <= 3 * maxYaw / 4:	velYawClass = 7
+    if 3 * maxYaw / 4 < avVelYaw <= maxYaw:			velYawClass = 8
 
 	#if minYaw <= avVelYaw < 4 * minYaw / 5:			velYawClass = 0
     #if 4 * minYaw / 5 <= avVelYaw < 3 * minYaw / 5:	velYawClass = 1
@@ -125,7 +125,6 @@ def getVelYawClas(avVelYaw, minYaw=-0.5, maxYaw=0.5, classes=9):	###############
     #if 7 * maxYaw / 10 <= avVelYaw < 8 * maxYaw / 10:	velYawClass = 18
     #if 8 * maxYaw / 10 <= avVelYaw < 9 * maxYaw / 10:	velYawClass = 19
     #if 9 * maxYaw / 10 <= avVelYaw < maxYaw:			velYawClass = 20
-
     return velYawClass
 
 

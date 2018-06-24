@@ -135,7 +135,7 @@ class PlotLearning(Callback):
 
         if len(self.x) > 0:
             if self.val_output_file is not None:
-                data_table = [(self.run_name, self.x[i], *[v[i] for v in self.values.values()]) for i in
+                data_table = [tuple([self.run_name, self.x[i]] + [v[i] for v in self.values.values()]) for i in
                               range(len(self.x))]
                 data_arr = np.asarray(data_table, dtype=[("run", "<U128"), ("epoch", int)] +
                                                         [(k, float) for k in self.values.keys()])
@@ -274,6 +274,24 @@ def prepare_comparison_plot(args):
     plot_ref_pred_comparison(ref_vals, pred_vals, filter=filter)
 
 
+def plot_control_balance(args):
+    ibg = ImageBatchGenerator(args.data_dir, multi_dir=args.val_dirs, shuffle=False, batch_size=1, crop=False)
+
+    fig, ax = plt.subplots(1, 1)
+    ax.title("")
+    ax.ylabel("Anzahl")
+    ax.xlabel("Drehgeschwindigkeit [%]")
+    ax.hist(ibg.labels, bins=[-0.5, -0.001, 0.001, 0.5])
+
+    lower = np.less_equal(ibg.labels, 0.001)
+    higher = np.greater_equal(ibg.labels, -0.001)
+    between = lower & higher
+
+    print("Nr. of samples between {} and {}: {}".format(-0.001, 0.001, np.sum(between)))
+
+    plt.show()
+
+
 if __name__ == '__main__':
     plot_parser = argparse.ArgumentParser("Plot the learning curve etc. for trained networks")
     plot_parser.add_argument("--method", action="store", type=str, default="comparison")
@@ -282,9 +300,10 @@ if __name__ == '__main__':
     plot_parser.add_argument("--run_dir", action="store", type=str, default="C:/Development/volksbot/"
                                                                             "autonomerVolksbot/run")
     plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_reg_lane_v13")
-    plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course")
+    plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--run", action="append", type=str, default=[])
     plot_parser.add_argument("--val_dir", action="store", type=str, default="test_course_oldcfg")
+    plot_parser.add_argument("--val_dirs", action="append", type=str, default=[])
     plot_parser.add_argument("--show_plot", action="store", type=int, default=1)
     plot_parser.add_argument("--output_file", action="store", type=str, default="learning_curves")
     args = plot_parser.parse_args()
@@ -301,5 +320,7 @@ if __name__ == '__main__':
             plot_learning_curve(data_arr, fig_path=os.path.join(args.run_dir, "{}.pdf".format(args.output_file)))
         else:
             prepare_learning_curve_plot(args)
+    elif args.method == "balance":
+        plot_control_balance(args)
     else:
         raise NotImplementedError("The method '{}' is not implemented".format(args.method))

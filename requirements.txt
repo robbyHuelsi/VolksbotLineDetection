@@ -1,3 +1,4 @@
+progressbar2
 tabulate
 numpy
 tensorflow-gpu==1.8.0

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import itertools
 from keras.callbacks import Callback
-from matplotlib import style
+from matplotlib import style, gridspec
 from tabulate import tabulate
 from inputFunctions import ImageBatchGenerator, getImgAndCommandList
 
@@ -20,8 +20,13 @@ color = {"green":  "#85be48", "gray": "#8a8b8a", "orange": "#ffa500", "light_ora
 cc = itertools.cycle(color.values())
 
 
-def plot_ref_pred_comparison(reference, predictions=None, filter=None):
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(3.5, 4.5))
+def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.005, start_ind=0, end_ind=None):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(7.1, 2.5), sharey=True, gridspec_kw={"width_ratios": [3, 1]})
+    matplotlib.rc('font', **{'weight': 'normal', 'size': 8})
+
+    reference = np.asarray(reference) / factor
+    reference = reference[start_ind:end_ind]
+    dps = len(reference)
 
     # if filter is not None:
     #     plt.suptitle(filter)
@@ -31,52 +36,46 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None):
         predictions = [p if p != None else np.nan for p in predictions]
         predictions = np.ma.array(predictions)
         predictions = np.ma.masked_where(predictions == np.nan, predictions)
+        predictions = predictions / factor
+        predictions = predictions[start_ind:end_ind]
 
-    ax1.set_title("Vergleich der Steuerbefehle")
-    ax1.plot(range(len(reference)), reference, label="Referenz", color=color["orange"], linewidth=2, marker=None)
+    #plt.suptitle("Steuerbefehl-Vergleich")
+
+    ax1.set_title("Steuerbefehl Vergleich - Verlauf")
+    ax1.plot(range(dps), reference, label="Referenz", color=color["orange"], linewidth=2)
 
     if predictions is not None:
-        ax1.plot(range(len(predictions)), predictions, label="Vorhersage", color=color["blue"], linewidth=2)
+        ax1.plot(range(dps), predictions, label="Vorhersage", color=color["blue"], linewidth=2)
 
     ax1.spines['right'].set_visible(False)
     ax1.spines['top'].set_visible(False)
-    vals = ax1.get_yticks()
-    vals = [str(int(x*100)) for x in vals]
-    ax1.set_yticklabels(vals)
     ax1.set_ylabel("Drehgeschwindigkeit [%]")
-    ax1.set_xlabel("Bild [nr.]")
-    #ax1.set_xlim([0.0, 250.0])
-    ax1.legend(fancybox=True, shadow=True, ncol=1, loc='lower center', bbox_to_anchor=(0.5, 1.5))
+    ax1.set_xlabel("Bild-Nummer")
+    ax1.legend(fancybox=True, shadow=True, ncol=1) # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
     ax1.grid(color=color["gray"], linestyle='-', linewidth='1')
 
     # Plot histogram of controls
-    ax2.set_title("Steuerbefehl-Histogramm")
+    ax2.set_title("Histogramm")
 
-    bins = np.arange(-1.05, 1.06, 0.1)
-    ticks = [-1.0, -0.8, -0.6, -0.4, -0.2, 0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    bins = np.arange(-0.5, 0.6, 0.1) / factor
 
     if predictions is not None:
         both = np.concatenate([np.asmatrix(predictions), np.asmatrix(reference)], axis=0).transpose()
-        ax2.hist(both[0:251, :], bins=bins, orientation='vertical', histtype='step', color=[color["blue"], color["orange"]],
+        ax2.hist(both, bins=bins, orientation='horizontal', histtype='step', color=[color["blue"], color["orange"]],
                  label=["Vorhersage", "Referenz"], linewidth=2)
     else:
-        ax2.hist(reference, bins=bins, orientation='vertical', histtype='step', color=color["orange"],
+        ax2.hist(np.asarray(reference), bins=bins, orientation='horizontal', histtype='step', color=color["orange"],
                  label="Referenz", linewidth=2)
 
     ax2.spines['right'].set_visible(False)
     ax2.spines['top'].set_visible(False)
-    ax2.set_xticks(ticks)
-    vals = ax2.get_xticks()
-    vals = [str(int(x * 100)) for x in vals]
-    ax2.set_xticklabels(vals)
-    #ax2.set_xlim([-0.3, 0.7])
-    ax2.set_ylabel("Anzahl")
-    ax2.set_xlabel("Drehgeschwindigkeit [%]")
+    ax2.set_xlabel("Anzahl")
+    #ax2.set_ylim([-40, 100])
+    #ax2.set_xlabel("Drehgeschwindigkeit [%]")
     ax2.grid(color=color["gray"], linestyle='-', linewidth='1')
-    #ax2.legend(fancybox=True, shadow=True, ncol=1)
 
     fig.tight_layout()
-    fig.savefig("../documentation/comp.pdf")
+    fig.savefig("../documentation/comp.pdf", pad_inches=0.0)
     plt.show()
 
 

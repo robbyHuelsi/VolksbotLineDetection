@@ -30,9 +30,9 @@ class ImgAndCmdWindow():
 
         # self.inputbox.state("zoomed")
 
-        self.windowWidth = 1200
+        self.windowWidth = 540
         
-        self.window.title("Autonomous Volksbot")
+        self.window.title("Autonomous Driving Volksbot - Evaluation GUI")
 
         self.svSubfolders = StringVar(self.window)
         self.svSubfolders.set("All folders")  # set the default option
@@ -87,7 +87,7 @@ class ImgAndCmdWindow():
     def drawInfoFrame(self):
         self.infoFrame = Frame(self.window)
         Label(self.infoFrame, text="Path: ").grid(sticky="E", row=0, column=0)
-        Entry(self.infoFrame, textvariable=self.svPath, state='readonly', width=100).grid(sticky="W", row=0, column=1)
+        Entry(self.infoFrame, textvariable=self.svPath, state='readonly', width=53).grid(sticky="W", row=0, column=1)
         Label(self.infoFrame, text="Date: ").grid(sticky="E", row=1, column=0)
         Label(self.infoFrame, textvariable=self.svDate).grid(sticky="W", row=1, column=1)
         Label(self.infoFrame, text="Frame: ").grid(sticky="E", row=2, column=0)
@@ -329,8 +329,8 @@ class ImgAndCmdWindow():
             Label(self.frame, textvariable=self.svTrueVelYawNeg, style="true.Label", width=labelWidth, anchor="center").grid(row=3, column=1, columnspan=3, sticky="S")
             Label(self.frame, textvariable=self.svPredVelYawNeg, style="pred.Label", width=labelWidth, anchor="center").grid(row=6, column=1, columnspan=3, sticky="N")
 
-            Label(self.frame, text="green = true data", style="true.Label").grid(row=10, column=0, columnspan=5)
-            Label(self.frame, text="blue = predicted data", style="pred.Label").grid(row=10, column=6, columnspan=5)
+            Label(self.frame, text="green = reference", style="true.Label").grid(row=10, column=0, columnspan=5)
+            Label(self.frame, text="blue = prediction", style="pred.Label").grid(row=10, column=6, columnspan=5)
 
             self.frame.pack()
 
@@ -401,7 +401,7 @@ class ImgAndCmdWindow():
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
-                                    "Development", "tmp", "data", "train_lane")
+                                    "volksbot", "data", "train_lane")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
                                        "volksbot", "runs", "mobilenet_reg_lane_v3", "predictions.json")
     '''

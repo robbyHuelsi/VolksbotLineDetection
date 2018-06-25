@@ -57,7 +57,7 @@ class MobileNetReg(HelperAPI):
         return target
 
     def postprocess_output(self, output):
-        return np.clip(output, -1.0, 1.0)
+        return np.clip(output, -0.5, 0.5)
 
 
 model_helper = MobileNetReg()

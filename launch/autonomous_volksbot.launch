@@ -54,7 +54,7 @@
 		<param name="zed_id"                value="$(arg zed_id)" />
 		<param name="serial_number"         value="$(arg serial_number)" />
 
-		<param name="resolution"            value="2" />
+		<param name="resolution"            value="3" />
 		<param name="quality"               value="1" />
 		<param name="sensing_mode"          value="0" />
 		<param name="frame_rate"            value="25" />
@@ -118,4 +118,5 @@
 	<param name="crop" value="$(arg crop)"/>
     </node>
 
+    <node name="rec_node" pkg="autonomous_driving" type="recorder.py" respawn="true" output="screen" />
 </launch>

@@ -16,7 +16,7 @@ from geometry_msgs.msg import Twist
 home_dir = os.path.expanduser("~")
 full_dir = os.path.join(home_dir, 'recordings')
 runtime = str(datetime.datetime.now()).replace(" ", "_").replace(":", "-")[:-7]
-name = sys.argv[1]
+name = runtime # sys.argv[1]
 
 if name is not None:
     runtime = name

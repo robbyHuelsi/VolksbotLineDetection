@@ -1,8 +1,8 @@
 progressbar2
 tabulate
 numpy
-tensorflow-gpu==1.8.0
+tensorflow-gpu==1.2.1
 h5py==2.8.0
 Pillow
 matplotlib
-keras
+keras==2.0.6

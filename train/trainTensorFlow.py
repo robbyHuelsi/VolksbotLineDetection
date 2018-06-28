@@ -122,13 +122,13 @@ def restore_recent_weights(model, save_dir, restore_file=None):
         restore_file = recent_files[0]
     elif restore_file and not os.path.isabs(restore_file):
         restore_file = os.path.join(save_dir, restore_file)
-    else:
-        tf.logging.info("Will not restore any weights!")
 
     if restore_file is not None and os.path.exists(restore_file):
         # If the model directory and the save file already exist, try to recover already saved weights
         tf.logging.info("Restoring weights from {}!".format(restore_file))
         model.load_weights(restore_file)
+    else:
+        tf.logging.info("Will not restore any weights!")
 
     return last_epoch
 

@@ -1,7 +1,9 @@
 import argparse
+import os
 
 import numpy as np
 import matplotlib.pyplot as plt
+from PIL import Image
 from keras import backend as K
 from keras import Model
 from keras.applications.mobilenet import MobileNet, preprocess_input
@@ -188,6 +190,7 @@ if __name__ == '__main__':
     analysis_parser.add_argument("--our_model", action="store", type=str, default="mobilenet_reg")
     analysis_parser.add_argument("--our_model_weights", action="store", type=str, default=None)
     analysis_parser.add_argument("--data_dir", action="store", type=str, default=None)
+    analysis_parser.add_argument("--img_file", action="store", type=str, default=None)
     args = analysis_parser.parse_args()
 
     assert args.data_dir
@@ -238,30 +241,46 @@ if __name__ == '__main__':
             plot_actv(lam.predict(img), img=(img[0, :, :, :] + 1.0) / 2.0, actv_fn=lambda x: x / 6.0)
             plt.waitforbuttonpress()
     elif args.method == "salient":
+        os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
         model = build_salient_model(our_model)
-        # model.summary()
-        ibg = ImageBatchGenerator(args.data_dir, preprocess_input=preprocess_input, labeled=False, shuffle=False,
-                                  crop=False, batch_size=1)
-        preds = model.predict_generator(ibg, verbose=1)
-        print(preds.shape)
 
-        for i, img in enumerate(ibg):
-            if not i % 25 == 0:
-                continue
-
-            pred = preds[i, :, :, :]
+        if args.img_file:
+            img = Image.open(args.img_file)
+            img = img.resize((224, 224))
+            np_img = preprocess_input(np.float32(img))
+            np_img = np.expand_dims(np_img, axis=0)
+            pred = model.predict(np_img)
             pred = (pred - np.min(pred)) / (np.max(pred) - np.min(pred))
-            img = (img[0, :, :, :] + 1.0) / 2.0
-            img[:, :, 1] += pred[:, :, 0]
-            img[:, :, 1] = np.clip(img[:, :, 1], 0.0, 1.0)
 
             plt.subplot(121)
             plt.title("Image")
-            plt.imshow(img)
+            plt.imshow(np.float32(img)/255.0)
             plt.subplot(122)
             plt.title("Salient Map")
-            plt.imshow(pred[:, :, 0], cmap="plasma")
-            plt.show(block=False)
-            plt.waitforbuttonpress()
+            plt.imshow(pred[0, :, :, 0], cmap="plasma")
+            plt.show()
+        else:
+            ibg = ImageBatchGenerator(args.data_dir, preprocess_input=preprocess_input, labeled=False, shuffle=False,
+                                      crop=False, batch_size=1)
+            preds = model.predict_generator(ibg, verbose=1)
+
+            for i, img in enumerate(ibg):
+                if not i % 25 == 0:
+                    continue
+
+                pred = preds[i, :, :, :]
+                pred = (pred - np.min(pred)) / (np.max(pred) - np.min(pred))
+                img = (img[0, :, :, :] + 1.0) / 2.0
+                img[:, :, 1] += pred[:, :, 0]
+                img[:, :, 1] = np.clip(img[:, :, 1], 0.0, 1.0)
+
+                plt.subplot(121)
+                plt.title("Image")
+                plt.imshow(img)
+                plt.subplot(122)
+                plt.title("Salient Map")
+                plt.imshow(pred[:, :, 0], cmap="plasma")
+                plt.show(block=False)
+                plt.waitforbuttonpress()
     else:
         raise NotImplementedError("The method '{}' is not implemented".format(args.method))

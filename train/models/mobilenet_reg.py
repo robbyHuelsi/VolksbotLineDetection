@@ -57,7 +57,15 @@ class MobileNetReg(HelperAPI):
         return target
 
     def postprocess_output(self, output):
-        return np.clip(output, -1.0, 1.0)
+        output = np.clip(output, -0.5, 0.5)
+
+        # Absolute zeroing of small values
+        greater = np.greater_equal(-0.001, output)
+        less = np.less_equal(0.001, output)
+        between = greater & less
+        output[between] = 0.0
+
+        return output
 
 
 model_helper = MobileNetReg()

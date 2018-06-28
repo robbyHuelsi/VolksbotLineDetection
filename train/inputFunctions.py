@@ -301,12 +301,16 @@ class ImageBatchGenerator(Sequence):
                 self._img_paths = [p for i, p in enumerate(self._img_paths) if i % abs(take_or_skip) != 0]
 
             if labeled:
+                self._x_vel = [sample["velX"] for sample in data_list]
+                #self._labels = [sample["velYaw"]*sample["velX"] for sample in data_list]
                 self._labels = [sample["velYaw"] for sample in data_list]
 
                 if take_or_skip > 0:
                     self._labels = self._labels[::take_or_skip]
+                    self._x_vel = self._x_vel[::take_or_skip]
                 elif take_or_skip < 0:
                     self._labels = [p for i, p in enumerate(self._labels) if i % abs(take_or_skip) != 0]
+                    self._x_vel = [p for i, p in enumerate(self._x_vel) if i % abs(take_or_skip) != 0]
 
         self.n_channels = n_channels
         self.shuffle = shuffle
@@ -349,10 +353,10 @@ class ImageBatchGenerator(Sequence):
         if self.crop:
             img = img.crop((380, 0, 1100, 720))
 
-        img = img.resize(self.dim, resample=Image.NEAREST)
-
         if self.augment:
             img = pillow_augmentations(img)
+
+        img = img.resize(self.dim, resample=Image.NEAREST)
 
         img = self.preprocess_input_fn(np.float32(img)) if self.preprocess_input_fn else np.float32(img)
 
@@ -381,6 +385,10 @@ class ImageBatchGenerator(Sequence):
     @property
     def features(self):
         return self._img_paths
+
+    @property
+    def x_vel(self):
+        return self._x_vel
 
     @staticmethod
     def from_args_and_helper(args, helper, mode):

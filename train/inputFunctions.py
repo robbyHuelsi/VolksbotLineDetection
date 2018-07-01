@@ -12,12 +12,14 @@ from PIL import Image
 from datetime import datetime
 from generateDataset import pillow_augmentations, gaussian_noise, channel_wise_zero_mean
 
+from models import mobilenet_cls
+
 
 def getImgAndCommandList(recordingsFolder, printInfo=False,
                          onlyUseSubfolder=None, roundNdigits=3,
                          framesTimeTrashhold=None, cmdTrashhold=0.01,
-                         filterZeros=False,
-                         getFullCmdList=False):
+                         filterZeros=False, getFullCmdList=False,
+                         useDiscretCmds=False):
     '''
     onlyUseSubfolder:
     - None:                Use all subfolders
@@ -131,6 +133,17 @@ def getImgAndCommandList(recordingsFolder, printInfo=False,
         if filterZeros:
             inputList = [d for d in inputList if
                          (d['velX'] != 0.0 or d['velYaw'] != 0.0)]
+        if useDiscretCmds:
+            mobileNetCls = mobilenet_cls.MobileNetCls()
+            for inputDict in inputList:
+                valXCls = mobilenet_cls.getVelYawClas(inputDict["velX"])
+                valYawCls = mobilenet_cls.getVelYawClas(inputDict["velYaw"])
+                valXCls = mobilenet_cls.oneHotEncode(valXCls).reshape((1,-1))
+                valYawCls = mobilenet_cls.oneHotEncode(valYawCls).reshape((1,-1))
+                valXCls = mobileNetCls.postprocess_output(valXCls)[0]
+                valYawCls = mobileNetCls.postprocess_output(valYawCls)[0]
+                inputDict["velX"] = valXCls
+                inputDict["velYaw"] = valYawCls
         return inputList
     else:
         print("!!! NO INPUT")
@@ -408,13 +421,14 @@ class ImageBatchGenerator(Sequence):
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
-                                    "volksbot/data/train_lane")
+                                    "volksbot", "data", "test_course_oldcfg")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
-                                       "volksbot", "predictions.json")
+                                       "volksbot/run/mobile_9cls_v6/predictions.json")
     imgAndCmdList = getImgAndCommandList(recordingsFolder,
-                                         onlyUseSubfolder="straight_lane_angle_move_left_2/left_rect",
+                                         onlyUseSubfolder="left_rect",
                                          framesTimeTrashhold=None,
                                          filterZeros=False,
+                                         useDiscretCmds=True,
                                          printInfo=True)
     # imgAndCommandList = addPredictionsToImgAndCommandList(imgAndCmdList,
     #                                                      predictionsJsonPath,

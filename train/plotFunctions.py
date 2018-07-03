@@ -14,6 +14,7 @@ from matplotlib import style, gridspec
 from matplotlib.ticker import MaxNLocator
 from tabulate import tabulate
 from inputFunctions import ImageBatchGenerator, getImgAndCommandList
+import matplotlib.font_manager as fm
 
 gray = "#8a8b8a"
 light_orange = "#ffe0b5"
@@ -22,11 +23,33 @@ color = {"black": "#000000", "green":  "#85be48",  "orange": "#ffa500", "blue": 
 markers = ["o", "^", ">", "<", "v", "s", "+"]
 cc = itertools.cycle(color.values())
 m = itertools.cycle(markers)
+prop = fm.FontProperties(fname='D:/Downloads/cmu/cmunrm.ttf', size=10)
 
 
 def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.005, start_ind=0, end_ind=None):
+    matplotlib.rc('font', family='serif')
+    matplotlib.rc('text', usetex=True)
+    #bins = np.arange(-0.5, 0.6, 0.1) / factor
+    bins = np.asarray([-0.5, -0.375, -0.25, -0.125, -0.001, 0.001, 0.125, 0.25, 0.375, 0.5]) / factor
+    yticks = np.asarray([-0.5, -0.375, -0.25, -0.125, 0.0, 0.125, 0.25, 0.375, 0.5]) / factor
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3), sharey=True, gridspec_kw={"width_ratios": [3, 1]})
-    #matplotlib.rc('font', **{'weight': 'normal', 'size': 8})
+
+    ax1.set_title("Steuerbefehl Vergleich - Verlauf", fontproperties=prop)
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    ax1.set_ylabel("Gierrate [\%]", fontproperties=prop)
+    ax1.set_xlabel("Bild-Nummer", fontproperties=prop)
+    ax1.grid(color=gray, linestyle='-', linewidth='1')
+
+    # Plot histogram of controls
+    ax2.set_title("Histogramm", fontproperties=prop)
+    ax2.spines['right'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.set_xlabel("Anzahl", fontproperties=prop)
+    ax2.set_yticks(yticks)
+    #ax2.set_ylim([-80, 100])
+    ax2.grid(color=gray, linestyle='-', linewidth='1', zorder=0)
 
     reference = np.asarray(reference) / factor
     reference = reference[start_ind:end_ind]
@@ -45,42 +68,27 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
             pred = pred[start_ind:end_ind]
             predictions[k] = pred
 
-    #plt.suptitle("Steuerbefehl-Vergleich")
-    ax1.set_title("Steuerbefehl Vergleich - Verlauf")
+    black = next(cc)
+    circle = next(m)
 
     if predictions is not None:
         for k, pred in predictions.items():
-            ax1.plot(range(dps), reference, pred, label="Vorhersage: {}".format(k.replace("mobilenet_", "")),
-                     color=next(cc), linewidth=2, markers=next(m))
+            c = next(cc)
+            ax1.plot(range(dps), pred, label="Vorhersage: {}".format(k.replace("mobilenet_", "").
+                                                                                replace("_", "\_")),
+                     color=c, linewidth=1)
+            ax2.hist(pred, bins=bins, orientation='horizontal', histtype='step', color=c, linewidth=2, zorder=3)
 
-    ax1.plot(range(dps), reference, label="Referenz", color="black", linewidth=2)
+            pred_hist, _ = np.histogram(pred, bins)
+            ax2.scatter(pred_hist[4], 0.0, marker="x", color=c, zorder=6)
 
-    ax1.spines['right'].set_visible(False)
-    ax1.spines['top'].set_visible(False)
-    ax1.set_ylabel("Giergeschwindigkeit [%]")
-    ax1.set_xlabel("Bild-Nummer")
-    ax1.legend(fancybox=True, shadow=True, ncol=1) # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
-    ax1.grid(color=gray, linestyle='-', linewidth='1')
+    ax1.plot(range(dps), reference, label="Referenz", color=black, linewidth=2)
 
-    # Plot histogram of controls
-    ax2.set_title("Histogramm")
+    ref_hist, _ = np.histogram(reference, bins)
+    ax2.scatter(ref_hist[4], 0.0, marker="x", color=black, zorder=6)
+    ax2.hist(np.asarray(reference), bins=bins, orientation='horizontal', histtype='step', color=black, linewidth=2, zorder=3)
 
-    bins = np.arange(-0.5, 0.6, 0.1) / factor
-
-    if predictions is not None:
-        for k, pred in predictions.items():
-            ax2.hist(pred, bins=bins, orientation='horizontal', histtype='step', color=next(cc),
-                     label="Vorhersage: {}".format(k), linewidth=2)
-
-    ax2.hist(np.asarray(reference), bins=bins, orientation='horizontal', histtype='step', color="black",
-             label="Referenz", linewidth=3)
-
-    ax2.spines['right'].set_visible(False)
-    ax2.spines['top'].set_visible(False)
-    ax2.set_xlabel("Anzahl")
-    #ax2.set_ylim([-40, 100])
-    #ax2.set_xlabel("Drehgeschwindigkeit [%]")
-    ax2.grid(color=gray, linestyle='-', linewidth='1')
+    ax1.legend(fancybox=True, shadow=True, ncol=1)  # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
 
     fig.tight_layout()
     fig.savefig("../documentation/comp.pdf", pad_inches=0.0)
@@ -170,9 +178,10 @@ class PlotLearning(Callback):
 
 def plot_learning_curve(data_table, show_plot=True, fig_path=None):
     #style.use('ggplot')
-    matplotlib.rc('font', **{'weight': 'normal', 'size': 8})
+    matplotlib.rc('font', family='serif')
+    matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots(1, 1, figsize=(4.5, 3))
-    ax.set_title("Fehlerverlauf")
+    ax.set_title("Fehlerverlauf", fontproperties=prop)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
 
@@ -187,12 +196,12 @@ def plot_learning_curve(data_table, show_plot=True, fig_path=None):
         data_dict[row["run"]]["metric"].append(row["val_metric"])
 
     for run in data_dict.keys():
-        label = run.replace("mobilenet_", "")
-        ax.plot(data_dict[run]["epoch"], data_dict[run]["loss"], label=label, color=next(cc), linewidth=2,
-                marker=next(m))
+        label = run.replace("mobilenet\_", "")
+        ax.plot(data_dict[run]["epoch"], data_dict[run]["loss"], label=label.replace("_","\_"), color=next(cc), linewidth=1,
+                marker=next(m), markersize=3)
 
-    ax.set_xlabel("Epochen")
-    ax.set_ylabel("Mean-Absolute-Error")
+    ax.set_xlabel("Epochen", fontproperties=prop)
+    ax.set_ylabel("Mean-Absolute-Error", fontproperties=prop)
     ax.legend(fancybox=True, shadow=True, ncol=1)
     ax.grid(color=gray, linestyle='-', linewidth='1')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))

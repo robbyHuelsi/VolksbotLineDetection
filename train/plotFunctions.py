@@ -255,7 +255,7 @@ def prepare_learning_curve_plot(args):
 
 def prepare_comparison_plot(args):
     ref_dict = getImgAndCommandList(os.path.join(args.data_dir, args.ref_dir), onlyUseSubfolder="left_rect",
-                                    filterZeros=True)
+                                    filterZeros=True, useDiscretCmds=args.useDiscretCmds)
 
     folders = sorted(list(set([os.path.basename(os.path.split(r["folderPath"])[-2]) for r in ref_dict])))
 
@@ -306,20 +306,22 @@ def plot_control_balance(args):
 if __name__ == '__main__':
     plot_parser = argparse.ArgumentParser("Plot the learning curve etc. for trained networks")
     plot_parser.add_argument("--method", action="store", type=str, default="comparison")
-    plot_parser.add_argument("--data_dir", action="store", type=str, default="C:/Development/volksbot/"
-                                                                             "autonomerVolksbot/data")
-    plot_parser.add_argument("--run_dir", action="store", type=str, default="C:/Development/volksbot/"
-                                                                            "autonomerVolksbot/run")
-    plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_reg_lane_v13")
+    plot_parser.add_argument("--data_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
+                                                                                          "volksbot/data"))
+    plot_parser.add_argument("--run_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
+                                                                                         "volksbot/run"))
+    plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_9cls_v6")
     plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--run", action="append", type=str, default=[])
     plot_parser.add_argument("--val_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--val_dirs", action="append", type=str, default=[])
     plot_parser.add_argument("--show_plot", action="store", type=int, default=1)
     plot_parser.add_argument("--output_file", action="store", type=str, default="learning_curves")
+    plot_parser.add_argument("--useDiscretCmds", action="store", type=bool, default=False)
     args = plot_parser.parse_args()
 
     if args.method == "comparison":
+        print(args.useDiscretCmds)
         prepare_comparison_plot(args)
     elif args.method == "learning_curve":
         csv_file = os.path.join(args.run_dir, "{}.csv".format(args.output_file))

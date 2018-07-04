@@ -22,12 +22,6 @@ parser.add_argument("--model_file", action="store", default=None, type=str,
                          "hdf5-saved model file.")
 parser.add_argument("--train_dense_only", action="store", default=0, type=int,
                     help="Whether or not to train the dense layer only.")
-parser.add_argument("--stop_early", action="store", default=0, type=int,
-                    help="Whether or not to use early stopping.")
-parser.add_argument("--patience", action="store", default=2, type=int,
-                    help="Number of epochs to wait for validation loss/accuracy to change.")
-parser.add_argument("--plot_progress", action="store", default=1, type=int,
-                    help="Whether or not to plot the learning progress during training.")
 parser.add_argument("--augment", action="store", default=0, type=int,
                     help="Whether or not to augment the training data.")
 parser.add_argument("--epochs", action="store", default=10, type=int,
@@ -59,6 +53,12 @@ parser.add_argument("--save_values", action="store", default=1, type=int,
                     help="Whether the train/val loss and metric values should be saved to 'learning_curve.csv'.")
 parser.add_argument("--description", action="store", default="", type=str,
                     help="Document other changes here that are not tracked by arguments.")
+parser.add_argument("--stop_early", action="store", default=0, type=int,
+                    help="Whether or not to use early stopping.")
+parser.add_argument("--patience", action="store", default=2, type=int,
+                    help="Number of epochs to wait for validation loss/accuracy to change.")
+parser.add_argument("--plot_progress", action="store", default=1, type=int,
+                    help="Whether or not to plot the learning progress during training.")
 
 # Dataset specific parameters
 parser.add_argument("--data_dir", action="store", default=os.path.join(
@@ -210,4 +210,35 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(parser.parse_args())
+    main(parser.parse_args(["--model_file", "mobilenet_cls",
+                            "--run_dir", "C:/Development/volksbot/autonomerVolksbot/run",
+                            "--batch_size", "4",
+                            "--session_name", "no_pretrain_higher_lr",
+                            "--data_dir", "C:/Development/volksbot/autonomerVolksbot/data/",
+                            "--train_dir", "train_lane",
+                            "--train_dir", "train_lane_curve",
+                            "--train_dir", "train_lane_outer_correction",
+                            "--train_dir", "train_lane_inner_correction",
+                            "--val_dir", "test_course_oldcfg",
+                            "--take_or_skip", "0",
+                            "--epochs", "20",
+                            "--show_summary", "1",
+                            "--pretrained", "0",
+                            "--learning_rate", "1e-4",
+                            "--decay_rate", "2e-5",
+                            "--plot_progress", "1"]))
+    main(parser.parse_args(["--model_file", "mobilenet_cls",
+                            "--run_dir", "C:/Development/volksbot/autonomerVolksbot/run",
+                            "--batch_size", "4",
+                            "--session_name", "no_pretrain",
+                            "--data_dir", "C:/Development/volksbot/autonomerVolksbot/data/",
+                            "--train_dir", "train_lane",
+                            "--train_dir", "train_lane_curve",
+                            "--train_dir", "train_lane_outer_correction",
+                            "--train_dir", "train_lane_inner_correction",
+                            "--val_dir", "test_course_oldcfg",
+                            "--take_or_skip", "0",
+                            "--epochs", "20",
+                            "--show_summary", "1",
+                            "--pretrained", "0",
+                            "--plot_progress", "1"]))

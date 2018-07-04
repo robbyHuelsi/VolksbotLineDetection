@@ -1,7 +1,8 @@
 import numpy as np
 from keras.models import Model
-from keras.layers import Input, Dense, Flatten
+from keras.layers import Input, Dense, Flatten, GlobalAveragePooling2D, Reshape, Dropout, Conv2D
 from keras.optimizers import Adam
+from keras.regularizers import l1
 from keras.utils import to_categorical
 from keras.applications.mobilenet import MobileNet, preprocess_input
 from .helper_api import HelperAPI
@@ -40,7 +41,8 @@ class MobileNetCls(HelperAPI):
         input_tensor = Input(input_shape)
         num_classes = 9	###############################################################################################################################
 
-        mobnet_basic = MobileNet(include_top=False, input_shape=input_shape, input_tensor=input_tensor)
+        weights = None if for_training and not args.pretrained else 'imagenet'
+        mobnet_basic = MobileNet(weights=weights, include_top=False, input_shape=input_shape, input_tensor=input_tensor)
 
         if for_training and args.train_dense_only:
             # Disable training for the convolutional layers
@@ -54,8 +56,22 @@ class MobileNetCls(HelperAPI):
                 # print("{}#{}, trainable={}".format(index, layer.name, layer.trainable))
                 # layer.trainable = False
 
-        # Extend mobile net by own fully connected layer
+        reg = l1(args.regularize) if for_training else l1(0.0)
+        dropout = args.dropout if for_training else 0.5
+
+        # Extend mobilenet by own fully connected layer
         x = mobnet_basic.layers[-1].output
+        x = GlobalAveragePooling2D()(x)
+        x = Reshape((1, 1, 1024), name='reshape_1')(x)
+        x = Dropout(dropout, name='dropout')(x)
+        # x = Conv2D(49, (1, 1), padding='same', name='pre_predictions', activation='relu',
+        #            kernel_regularizer=reg, bias_regularizer=reg)(x)
+        x = Conv2D(num_classes, (1, 1), padding='same', name='predictions', activation='softmax',
+                   kernel_regularizer=reg, bias_regularizer=reg)(x)
+        predictions = Flatten()(x)
+
+        # Extend mobile net by own fully connected layer
+        # x = mobnet_basic.layers[-1].output
 
         # TODO Evaluate if the original layers from MobileNet bring better performance/accuracy
         # x = GlobalAveragePooling2D()(x)
@@ -65,8 +81,8 @@ class MobileNetCls(HelperAPI):
         # x = Activation('softmax', name='act_softmax')(x)
         # x = Flatten()(x)
 
-        x = Flatten()(x)
-        predictions = Dense(num_classes, activation='softmax', name='predictions')(x)
+        # x = Flatten()(x)
+        #predictions = Dense(num_classes, activation='softmax', name='predictions')(x)
 
         mobnet_extended = Model(inputs=input_tensor, outputs=predictions, name='mobilenet_cls')
 

@@ -15,6 +15,9 @@ from matplotlib.ticker import MaxNLocator
 from tabulate import tabulate
 from inputFunctions import ImageBatchGenerator, getImgAndCommandList
 import matplotlib.font_manager as fm
+# import locale
+# Set to German locale to get comma decimal separater
+# locale.setlocale(locale.LC_NUMERIC, "de_DE")
 
 gray = "#8a8b8a"
 light_orange = "#ffe0b5"
@@ -29,9 +32,11 @@ prop = fm.FontProperties(fname='D:/Downloads/cmu/cmunrm.ttf', size=10)
 def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.005, start_ind=0, end_ind=None):
     matplotlib.rc('font', family='serif')
     matplotlib.rc('text', usetex=True)
+    matplotlib.rcParams['axes.formatter.use_locale'] = True
     #bins = np.arange(-0.5, 0.6, 0.1) / factor
     bins = np.asarray([-0.5, -0.375, -0.25, -0.125, -0.001, 0.001, 0.125, 0.25, 0.375, 0.5]) / factor
-    yticks = np.asarray([-0.5, -0.375, -0.25, -0.125, 0.0, 0.125, 0.25, 0.375, 0.5]) / factor
+    #yticks = np.asarray([-0.5, -0.375, -0.25, -0.125, 0.0, 0.125, 0.25, 0.375, 0.5]) / factor
+    yticks = np.asarray([-0.4375, -0.3125, -0.1875, -0.0625, 0, 0.0625, 0.1875, 0.3125, 0.4375]) / factor
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3), sharey=True, gridspec_kw={"width_ratios": [3, 1]})
 
@@ -91,7 +96,7 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
     ax1.legend(fancybox=True, shadow=True, ncol=1)  # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
 
     fig.tight_layout()
-    fig.savefig("../documentation/comp.pdf", pad_inches=0.0)
+    fig.savefig("../documentation/comp_cls.pdf", pad_inches=0.0)
     plt.show()
 
 
@@ -181,7 +186,7 @@ def plot_learning_curve(data_table, show_plot=True, fig_path=None):
     matplotlib.rc('font', family='serif')
     matplotlib.rc('text', usetex=True)
     fig, ax = plt.subplots(1, 1, figsize=(4.5, 3))
-    ax.set_title("Fehlerverlauf", fontproperties=prop)
+    ax.set_title("Genauigkeitsverlauf", fontproperties=prop)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
 
@@ -197,15 +202,16 @@ def plot_learning_curve(data_table, show_plot=True, fig_path=None):
 
     for run in data_dict.keys():
         label = run.replace("mobilenet\_", "")
-        ax.plot(data_dict[run]["epoch"], data_dict[run]["loss"], label=label.replace("_","\_"), color=next(cc), linewidth=1,
+        ax.plot(data_dict[run]["epoch"], np.asarray(data_dict[run]["metric"])/0.01, label=label.replace("_","\_"), color=next(cc), linewidth=1,
                 marker=next(m), markersize=3)
 
     ax.set_xlabel("Epochen", fontproperties=prop)
-    ax.set_ylabel("Mean-Absolute-Error", fontproperties=prop)
+    ax.set_ylabel("Genauigkeit [\%]", fontproperties=prop)
     ax.legend(fancybox=True, shadow=True, ncol=1)
     ax.grid(color=gray, linestyle='-', linewidth='1')
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     ax.set_xlim([0, 20])
+    ax.set_ylim([20, 40])
     fig.tight_layout()
 
     if fig_path is not None:
@@ -264,7 +270,7 @@ def prepare_learning_curve_plot(args):
 
 def prepare_comparison_plot(args):
     ref_dict = getImgAndCommandList(os.path.join(args.data_dir, args.ref_dir), onlyUseSubfolder="left_rect",
-                                    filterZeros=True, useDiscretCmds=args.useDiscretCmds)
+                                    filterZeros=True, useDiscretCmds=args.use_discrete_cmds)
 
     folders = sorted(list(set([os.path.basename(os.path.split(r["folderPath"])[-2]) for r in ref_dict])))
 
@@ -278,12 +284,20 @@ def prepare_comparison_plot(args):
     ref_basenames = [r["fileName"] + r["fileExt"] for r in ref_dict if filter in r["folderPath"]]
     pred_vals = {}
 
+    name_lookup = {"mobilenet_9cls_lane_v3": "mobilenet_cls_no_outer_aug",
+                   "mobilenet_9cls_lane_v4": "mobilenet_cls_no_outer_aug_orig",
+                   "mobilenet_9cls_v5": "mobilenet_cls_aug_orig",
+                   "mobilenet_9cls_v6": "mobilenet_cls_no_pretrain_aug_orig"}
+
     for v in args.val_dirs:
         json_file = os.path.join(args.run_dir, v, "predictions.json")
 
         if os.path.exists(json_file):
             with open(json_file) as f:
                 predictions = json.load(f)
+
+            if v in name_lookup:
+                v = name_lookup[v]
 
             # Do some checks before merging the reference and prediction values
             basenames = [p["fileName"] + p["fileExt"] for p in predictions if filter in p["relFolderPath"]]
@@ -315,22 +329,21 @@ def plot_control_balance(args):
 if __name__ == '__main__':
     plot_parser = argparse.ArgumentParser("Plot the learning curve etc. for trained networks")
     plot_parser.add_argument("--method", action="store", type=str, default="comparison")
-    plot_parser.add_argument("--data_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
-                                                                                          "volksbot/data"))
-    plot_parser.add_argument("--run_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
-                                                                                         "volksbot/run"))
-    plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_9cls_v6")
+    plot_parser.add_argument("--data_dir", action="store", type=str, default="C:/Development/volksbot/"
+                                                                             "autonomerVolksbot/data")
+    plot_parser.add_argument("--run_dir", action="store", type=str, default="C:/Development/volksbot/"
+                                                                             "autonomerVolksbot/run")
+    plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_reg_lane_v13")
     plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--run", action="append", type=str, default=[])
     plot_parser.add_argument("--val_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--val_dirs", action="append", type=str, default=[])
     plot_parser.add_argument("--show_plot", action="store", type=int, default=1)
     plot_parser.add_argument("--output_file", action="store", type=str, default="learning_curves")
-    plot_parser.add_argument("--useDiscretCmds", action="store", type=bool, default=False)
+    plot_parser.add_argument("--use_discrete_cmds", action="store", type=int, default=0)
     args = plot_parser.parse_args()
 
     if args.method == "comparison":
-        print(args.useDiscretCmds)
         prepare_comparison_plot(args)
     elif args.method == "learning_curve":
         csv_file = os.path.join(args.run_dir, "{}.csv".format(args.output_file))

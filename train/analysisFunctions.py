@@ -155,7 +155,7 @@ class MultLayer(Layer):
         super(MultLayer, self).build(input_shape)
 
     def call(self, x, **kwargs):
-        return x * kwargs["y"]
+        return x + kwargs["y"]
 
     def compute_output_shape(self, input_shape):
         return input_shape
@@ -192,8 +192,6 @@ if __name__ == '__main__':
     analysis_parser.add_argument("--data_dir", action="store", type=str, default=None)
     analysis_parser.add_argument("--img_file", action="store", type=str, default=None)
     args = analysis_parser.parse_args()
-
-    assert args.data_dir
 
     ref_model = None
     our_model = None
@@ -251,6 +249,10 @@ if __name__ == '__main__':
             np_img = np.expand_dims(np_img, axis=0)
             pred = model.predict(np_img)
             pred = (pred - np.min(pred)) / (np.max(pred) - np.min(pred))
+            pred = np.uint8(pred * 255)
+
+            img = Image.fromarray(pred[0, :, :, 0], "L")
+            img.save("../documentation/so_1.jpg")
 
             plt.subplot(121)
             plt.title("Image")

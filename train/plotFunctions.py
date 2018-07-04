@@ -9,15 +9,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import itertools
+
+from PIL import Image
 from keras.callbacks import Callback
 from matplotlib import style, gridspec
 from matplotlib.ticker import MaxNLocator
 from tabulate import tabulate
 from inputFunctions import ImageBatchGenerator, getImgAndCommandList
 import matplotlib.font_manager as fm
-# import locale
-# Set to German locale to get comma decimal separater
-# locale.setlocale(locale.LC_NUMERIC, "de_DE")
+import locale
+
+# Set default latex and german plot settings
+locale.setlocale(locale.LC_NUMERIC, "de_DE.utf8")
+matplotlib.rc('font', family='serif')
+matplotlib.rc('text', usetex=True)
+matplotlib.rcParams['axes.formatter.use_locale'] = True
 
 gray = "#8a8b8a"
 light_orange = "#ffe0b5"
@@ -26,7 +32,8 @@ color = {"black": "#000000", "green":  "#85be48",  "orange": "#ffa500", "blue": 
 markers = ["o", "^", ">", "<", "v", "s", "+"]
 cc = itertools.cycle(color.values())
 m = itertools.cycle(markers)
-prop = fm.FontProperties(fname='D:/Downloads/cmu/cmunrm.ttf', size=10)
+prop = fm.FontProperties(fname='/home/florian/Downloads/computer-modern/cmunrm.ttf', size=10)
+#prop = fm.FontProperties(family="Computer Modern Serif Roman", size=10)
 
 
 def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.005, start_ind=0, end_ind=None):
@@ -309,20 +316,40 @@ def prepare_comparison_plot(args):
 
 
 def plot_control_balance(args):
-    ibg = ImageBatchGenerator(args.data_dir, multi_dir=args.val_dirs, shuffle=False, batch_size=1, crop=False)
+    ibg_train = ImageBatchGenerator(args.data_dir, multi_dir=args.val_dirs, shuffle=False, batch_size=1, crop=False)
+    ibg_test = ImageBatchGenerator(os.path.join(args.data_dir, "test_course_oldcfg"), shuffle=False, batch_size=1, crop=False)
 
-    fig, ax = plt.subplots(1, 1)
-    ax.title("")
-    ax.ylabel("Anzahl")
-    ax.xlabel("Drehgeschwindigkeit [%]")
-    ax.hist(ibg.labels, bins=[-0.5, -0.001, 0.001, 0.5])
+    factor = 0.005
+    bins = np.asarray([-0.5, -0.375, -0.25, -0.125, -0.001, 0.001, 0.125, 0.25, 0.375, 0.5]) / factor
+    yticks = np.asarray([-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5]) / factor
+    _ = next(cc)
+    _ = next(cc)
+    c1 = next(cc)
+    c2 = next(cc)
 
-    lower = np.less_equal(ibg.labels, 0.001)
-    higher = np.greater_equal(ibg.labels, -0.001)
-    between = lower & higher
+    fig, ax = plt.subplots(1, 1, figsize=(4.5, 3))
+    ax.set_title("Steuerbefehl-Verteilung", fontproperties=prop)
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.set_xlabel("Anzahl", fontproperties=prop)
+    ax.set_ylabel("Gierrate [\%]", fontproperties=prop)
+    ax.grid(color=gray, linestyle='-', linewidth='1', zorder=0)
+    ax.set_yticks(yticks)
+    ax.hist(np.asarray(ibg_train.labels)/factor, label="Training", bins=bins, orientation='horizontal', histtype="step", linewidth=2, color=c1, zorder=3)
+    ax.hist(np.asarray(ibg_test.labels)/factor, label="Test", bins=bins, orientation='horizontal', histtype="step", linewidth=2, color=c2, zorder=3)
 
-    print("Nr. of samples between {} and {}: {}".format(-0.001, 0.001, np.sum(between)))
+    counts_train, _ = np.histogram(np.asarray(ibg_train.labels)/factor, bins=bins)
+    counts_test, _ = np.histogram(np.asarray(ibg_test.labels)/factor, bins=bins)
+    print(np.sum(counts_train))
+    print(np.sum(counts_test))
 
+    ax.scatter(counts_train[4], 0, marker="x", color=c1, zorder=6)
+    ax.scatter(counts_test[4], 0, marker="x", color=c2, zorder=6)
+    ax.legend(fancybox=True, shadow=True, ncol=1)  # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
+    plt.show()
+
+    fig.tight_layout()
+    fig.savefig("../documentation/balance.pdf", pad_inches=0.0)
     plt.show()
 
 
@@ -358,5 +385,31 @@ if __name__ == '__main__':
             prepare_learning_curve_plot(args)
     elif args.method == "balance":
         plot_control_balance(args)
+    elif args.method == "quad":
+        fig = plt.figure(figsize=(4.5, 4.5))
+
+        plt.subplot(221)
+        plt.title("Regression (vortrainiert)", fontproperties=prop)
+        img = Image.open("../documentation/so_reg_hlr.jpg")
+        plt.imshow(np.uint8(img), cmap="jet")
+
+        plt.subplot(222)
+        plt.title("Regression (zufaellig)", fontproperties=prop)
+        img = Image.open("../documentation/so_reg_nphlr.jpg")
+        plt.imshow(np.uint8(img), cmap="jet")
+
+        plt.subplot(223)
+        plt.title("Klassifikation (vortrainiert)", fontproperties=prop)
+        img = Image.open("../documentation/so_cls_hlr.jpg")
+        plt.imshow(np.uint8(img), cmap="jet")
+
+        plt.subplot(224)
+        plt.title("Klassifikation (zufaellig)", fontproperties=prop)
+        img = Image.open("../documentation/so_cls_nphlr.jpg")
+        plt.imshow(np.uint8(img), cmap="jet")
+
+        fig.tight_layout()
+        fig.savefig("../documentation/sa_quad.pdf", pad_inches=0.0)
+        plt.show()
     else:
         raise NotImplementedError("The method '{}' is not implemented".format(args.method))

@@ -40,7 +40,8 @@ class MobileNetCls(HelperAPI):
         input_tensor = Input(input_shape)
         num_classes = 9	###############################################################################################################################
 
-        mobnet_basic = MobileNet(include_top=False, input_shape=input_shape, input_tensor=input_tensor)
+        weights = None if for_training and not args.pretrained else 'imagenet'
+        mobnet_basic = MobileNet(weights=weights, include_top=False, input_shape=input_shape, input_tensor=input_tensor)
 
         if for_training and args.train_dense_only:
             # Disable training for the convolutional layers

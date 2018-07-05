@@ -29,8 +29,8 @@ class ImgAndCmdWindow():
         self.player = None
 
         # self.inputbox.state("zoomed")
-
         self.windowWidth = 1200
+
         
         self.window.title("Autonomous Volksbot")
 
@@ -77,11 +77,20 @@ class ImgAndCmdWindow():
         self.infoFrame = None
         if self.showInfo: self.drawInfoFrame()
 
-        self.cmdWindow = ImgAndCmdWindow.CmdWindow(Toplevel(self.window))
+        second_win = Toplevel()
+        self.cmdWindow = ImgAndCmdWindow.CmdWindow(second_win)
+        #second_win.update_idletasks()
+        #size = tuple(int(_) for _ in second_win.geometry().split('+')[0].split('x'))
+        #second_win.geometry("%dx%d+%d+%d" % (size + (3510, 400)))
 
         # self.window.protocol("WM_DELETE_WINDOW", self.onClosing())
         self.updateViewForSubfolderFilter()
         self.updateViewForFrame()
+        
+        #self.window.update_idletasks()
+        #size = tuple(int(_) for _ in self.window.geometry().split('+')[0].split('x'))
+        #self.window.geometry("%dx%d+%d+%d" % (size + (2220, 100)))
+        
         self.window.mainloop()
         
     def drawInfoFrame(self):
@@ -331,8 +340,9 @@ class ImgAndCmdWindow():
 
             Label(self.frame, text="green = true data", style="true.Label").grid(row=10, column=0, columnspan=5)
             Label(self.frame, text="blue = predicted data", style="pred.Label").grid(row=10, column=6, columnspan=5)
-
+            
             self.frame.pack()
+            
 
         def updateViewForFrame(self, trueVelX, trueVelYaw, predVelX, predVelYaw):
             self.pbTrueVelXPos["value"] = trueVelX if trueVelX > 0.0 else 0
@@ -384,7 +394,7 @@ class ImgAndCmdWindow():
             while not self.stopped():
                 self.parent.forward()
                 time.sleep(0.04)
-
+ 
         def stop(self):
             self._stop.set()
 
@@ -403,7 +413,8 @@ if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "volksbot", "data", "test_course_oldcfg")
     predictionsJsonPath = os.path.join(os.path.expanduser("~"),
-                                       "volksbot", "run", "mobilenet_9cls_v6", "predictions.json")
+                                       "volksbot", "test_course_predictions",
+                                       "mobilenet_cls_aug.json")
     '''
     recordingsFolder = os.path.join(os.path.expanduser("~"),
                                     "recordings_vs")
@@ -412,9 +423,9 @@ if __name__ == "__main__":
     imgAndCmdList = ifu.getImgAndCommandList(recordingsFolder,
                                              onlyUseSubfolder="left_rect",
                                              filterZeros=True,
-                                             useDiscretCmds=True)
+                                             useDiscretCmds=False)
     imgAndCmdList = ifu.addPredictionsToImgAndCommandList(imgAndCmdList,
                                                           predictionsJsonPath,
                                                           roundNdigits=0)
     subfoldersList = ifu.getSubfolderListOfImgAndCommandList(imgAndCmdList)
-    app = ImgAndCmdWindow(imgAndCmdList, subfoldersList)
+    app = ImgAndCmdWindow(imgAndCmdList, subfoldersList, showInfo=False)

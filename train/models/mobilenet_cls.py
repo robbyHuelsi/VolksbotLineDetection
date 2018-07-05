@@ -1,6 +1,6 @@
 import numpy as np
 from keras.models import Model
-from keras.layers import Input, Dense, Flatten
+from keras.layers import Input, Dense, Flatten, GlobalAveragePooling2D, Reshape, Dropout, Conv2D, Activation
 from keras.optimizers import Adam
 from keras.utils import to_categorical
 from keras.applications.mobilenet import MobileNet, preprocess_input
@@ -59,15 +59,15 @@ class MobileNetCls(HelperAPI):
         x = mobnet_basic.layers[-1].output
 
         # TODO Evaluate if the original layers from MobileNet bring better performance/accuracy
-        # x = GlobalAveragePooling2D()(x)
-        # x = Reshape((1, 1, 1024), name='reshape_1')(x)
-        # x = Dropout(0.5, name='dropout')(x)
-        # x = Conv2D(num_classes, (1, 1), padding='same', name='conv_preds')(x)
-        # x = Activation('softmax', name='act_softmax')(x)
-        # x = Flatten()(x)
+        x = GlobalAveragePooling2D()(x)
+        x = Reshape((1, 1, 1024), name='reshape_1')(x)
+        x = Dropout(0.5, name='dropout')(x)
+        x = Conv2D(num_classes, (1, 1), padding='same', name='conv_preds')(x)
+        x = Activation('softmax', name='act_softmax')(x)
+        predictions = Flatten()(x)
 
-        x = Flatten()(x)
-        predictions = Dense(num_classes, activation='softmax', name='predictions')(x)
+        # x = Flatten()(x)
+        # predictions = Dense(num_classes, activation='softmax', name='predictions')(x)
 
         mobnet_extended = Model(inputs=input_tensor, outputs=predictions, name='mobilenet_cls')
 

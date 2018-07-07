@@ -376,14 +376,14 @@ if __name__ == '__main__':
                                                                                           "volksbot/data"))
     plot_parser.add_argument("--run_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
                                                                                          "volksbot/run"))
-    plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_reg_higher_lr")
+    #plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_reg_higher_lr")
     plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--run", action="append", type=str, default=[])
     plot_parser.add_argument("--val_dir", action="store", type=str, default="test_course_oldcfg")
-    plot_parser.add_argument("--val_dirs", action="append", type=str, default=["mobilenet_reg_higher_lr"])
+    plot_parser.add_argument("--val_dirs", action="append", type=str, default=["mobilenet_cls_no_pretrain_c5"])
     plot_parser.add_argument("--show_plot", action="store", type=int, default=1)
     plot_parser.add_argument("--output_file", action="store", type=str, default="learning_curves")
-    plot_parser.add_argument("--use_discrete_cmds", action="store", type=int, default=0)
+    plot_parser.add_argument("--use_discrete_cmds", action="store", type=int, default=1)
     args = plot_parser.parse_args()
 
     if args.method == "comparison":

@@ -20,8 +20,8 @@ light_orange = "#ffe0b5"
 color = {"black": "#000000", "green":  "#85be48",  "orange": "#ffa500", "blue": "#0fa3b1", "pink": "#6b2d5c",
          "red_pink": "#9e0031", "turquoise": "#7afdd6"}
 markers = ["o", "^", ">", "<", "v", "s", "+"]
-cc = itertools.cycle(color.values())
-m = itertools.cycle(markers)
+colCyc = itertools.cycle(color.values())
+marCyc = itertools.cycle(markers)
 
 
 def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.005, start_ind=0, end_ind=None):
@@ -50,10 +50,11 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
 
     if predictions is not None:
         for k, pred in predictions.items():
-            ax1.plot(range(dps), reference, pred, label="Vorhersage: {}".format(k.replace("mobilenet_", "")),
-                     color=next(cc), linewidth=2, markers=next(m))
+            print(k)
+            ax1.plot(range(dps), reference, pred, label="Berechnete Steuerbefehle",
+                     color=color["blue"], linewidth=2)
 
-    ax1.plot(range(dps), reference, label="Referenz", color="black", linewidth=2)
+    ax1.plot(range(dps), reference, label="Aufgezeichnete Steuerbefehle", color=color["blue"], linewidth=2)
 
     ax1.spines['right'].set_visible(False)
     ax1.spines['top'].set_visible(False)
@@ -69,10 +70,10 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
 
     if predictions is not None:
         for k, pred in predictions.items():
-            ax2.hist(pred, bins=bins, orientation='horizontal', histtype='step', color=next(cc),
+            ax2.hist(pred, bins=bins, orientation='horizontal', histtype='step', color=color["green"],
                      label="Vorhersage: {}".format(k), linewidth=2)
 
-    ax2.hist(np.asarray(reference), bins=bins, orientation='horizontal', histtype='step', color="black",
+    ax2.hist(np.asarray(reference), bins=bins, orientation='horizontal', histtype='step', color=color["blue"],
              label="Referenz", linewidth=3)
 
     ax2.spines['right'].set_visible(False)
@@ -188,8 +189,8 @@ def plot_learning_curve(data_table, show_plot=True, fig_path=None):
 
     for run in data_dict.keys():
         label = run.replace("mobilenet_", "")
-        ax.plot(data_dict[run]["epoch"], data_dict[run]["loss"], label=label, color=next(cc), linewidth=2,
-                marker=next(m))
+        ax.plot(data_dict[run]["epoch"], data_dict[run]["loss"], label=label, color=next(colCyc), linewidth=2,
+                marker=next(marCyc))
 
     ax.set_xlabel("Epochen")
     ax.set_ylabel("Mean-Absolute-Error")
@@ -271,6 +272,7 @@ def prepare_comparison_plot(args):
 
     for v in args.val_dirs:
         json_file = os.path.join(args.run_dir, v, "predictions.json")
+        print(json_file)
 
         if os.path.exists(json_file):
             with open(json_file) as f:
@@ -310,11 +312,11 @@ if __name__ == '__main__':
                                                                                           "volksbot/data"))
     plot_parser.add_argument("--run_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
                                                                                          "volksbot/run"))
-    plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_9cls_v6")
+    plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_reg_higher_lr")
     plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--run", action="append", type=str, default=[])
     plot_parser.add_argument("--val_dir", action="store", type=str, default="test_course_oldcfg")
-    plot_parser.add_argument("--val_dirs", action="append", type=str, default=[])
+    plot_parser.add_argument("--val_dirs", action="append", type=str, default=["mobilenet_reg_higher_lr"])
     plot_parser.add_argument("--show_plot", action="store", type=int, default=1)
     plot_parser.add_argument("--output_file", action="store", type=str, default="learning_curves")
     plot_parser.add_argument("--useDiscretCmds", action="store", type=bool, default=False)

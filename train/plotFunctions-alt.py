@@ -9,65 +9,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 import tensorflow as tf
 import itertools
-
-from PIL import Image
 from keras.callbacks import Callback
 from matplotlib import style, gridspec
 from matplotlib.ticker import MaxNLocator
 from tabulate import tabulate
 from inputFunctions import ImageBatchGenerator, getImgAndCommandList
-import matplotlib.font_manager as fm
-import locale
-
-# Set default latex and german plot settings
-#locale.setlocale(locale.LC_NUMERIC, "de_DE.utf8")
-#matplotlib.rc('font', family='serif')
-#matplotlib.rc('text', usetex=True)
-#matplotlib.rcParams['axes.formatter.use_locale'] = True
 
 gray = "#8a8b8a"
 light_orange = "#ffe0b5"
-color = {"black": "#000000", "green": "#85be48", "orange": "#ffa500", "blue": "#0fa3b1", "pink": "#6b2d5c",
+color = {"black": "#000000", "green":  "#85be48",  "orange": "#ffa500", "blue": "#0fa3b1", "pink": "#6b2d5c",
          "red_pink": "#9e0031", "turquoise": "#7afdd6"}
 markers = ["o", "^", ">", "<", "v", "s", "+"]
-cc = itertools.cycle(color.values())
-m = itertools.cycle(markers)
-#prop = fm.FontProperties(fname='/home/florian/Downloads/computer-modern/cmunrm.ttf', size=10)
-prop = fm.FontProperties(family="Arial", size=10)
+colCyc = itertools.cycle(color.values())
+marCyc = itertools.cycle(markers)
 
 
 def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.005, start_ind=0, end_ind=None):
-    #matplotlib.rc('font', family='serif')
-    #matplotlib.rc('text', usetex=True)
-    #matplotlib.rcParams['axes.formatter.use_locale'] = True
-    bins = np.arange(-0.5, 0.6, 0.1) / factor
-    #bins = np.asarray([-0.5, -0.375, -0.25, -0.125, -0.001, 0.001, 0.125, 0.25, 0.375, 0.5]) / factor
-    yticks = np.asarray([-0.5, -0.375, -0.25, -0.125, 0.0, 0.125, 0.25, 0.375, 0.5]) / factor
-    #yticks = np.asarray([-0.4375, -0.3125, -0.1875, -0.0625, 0, 0.0625, 0.1875, 0.3125, 0.4375]) / factor
-
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4), sharey=True, gridspec_kw={"width_ratios": [3, 1]})
-
-    ax1.set_title("Steuerbefehl Vergleich - Verlauf", fontproperties=prop)
-    ax1.spines['right'].set_visible(False)
-    ax1.spines['top'].set_visible(False)
-    # ax1.set_ylabel("Gierrate [\%] (Klassen-Nr.)", fontproperties=prop)
-    ax1.set_ylabel("Gierrate [%]", fontproperties=prop)
-    ax1.set_xlabel("Bild-Nummer", fontproperties=prop)
-    ax1.grid(color=gray, linestyle='-', linewidth='1')
-
-    # Plot histogram of controls
-    ax2.set_title("Histogramm", fontproperties=prop)
-    ax2.spines['right'].set_visible(False)
-    ax2.spines['top'].set_visible(False)
-    ax2.set_xlabel("Anzahl", fontproperties=prop)
-    ax2.set_yticks(yticks)
-
-    #vals = ax.get_yticks()
-    #vals = [str(int(x * 100)) for x in vals]
-    #ax2.set_yticklabels(["{} ({})".format(a, i) for i, a in enumerate(yticks)])
-
-    # ax2.set_ylim([-80, 100])
-    ax2.grid(color=gray, linestyle='-', linewidth='1', zorder=0)
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3), sharey=True, gridspec_kw={"width_ratios": [3, 1]})
+    #matplotlib.rc('font', **{'weight': 'normal', 'size': 8})
 
     reference = np.asarray(reference) / factor
     reference = reference[start_ind:end_ind]
@@ -86,27 +45,46 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
             pred = pred[start_ind:end_ind]
             predictions[k] = pred
 
-    circle = next(m)
+    #plt.suptitle("Steuerbefehl-Vergleich")
+    ax1.set_title("Steuerbefehl Vergleich - Verlauf")
 
     if predictions is not None:
         for k, pred in predictions.items():
-            ax1.plot(range(dps), pred, label="Berechnete Steuerbefehle", color="blue", linewidth=1)
-            ax2.hist(pred, bins=bins, orientation='horizontal', histtype='step', color="blue", linewidth=2, zorder=3)
+            print(k)
+            ax1.plot(range(dps), pred, label="Berechnete Steuerbefehle",
+                     color=color["blue"], linewidth=2)
 
-            pred_hist, _ = np.histogram(pred, bins)
-            ax2.scatter(pred_hist[4], 0.0, marker="x", color="blue", zorder=6)
+    ax1.plot(range(dps), reference, label="Aufgezeichnete Steuerbefehle", color=color["green"], linewidth=2)
 
-    ax1.plot(range(dps), reference, label="Aufgezeichnete Steuerbefehle", color="#00740b", linewidth=2)
+    ax1.spines['right'].set_visible(False)
+    ax1.spines['top'].set_visible(False)
+    ax1.set_ylabel("Giergeschwindigkeit [%]")
+    ax1.set_xlabel("Bild-Nummer")
+    ax1.legend(fancybox=True, shadow=True, ncol=1) # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
+    ax1.grid(color=gray, linestyle='-', linewidth='1')
 
-    ref_hist, _ = np.histogram(reference, bins)
-    ax2.scatter(ref_hist[4], 0.0, marker="x", color="#00740b", zorder=6)
-    ax2.hist(np.asarray(reference), bins=bins, orientation='horizontal', histtype='step', color="#00740b", linewidth=2,
-             zorder=3)
+    # Plot histogram of controls
+    ax2.set_title("Histogramm")
 
-    ax1.legend(fancybox=True, shadow=True, ncol=1)  # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
+    bins = np.arange(-0.5, 0.6, 0.1) / factor
 
-    #fig.tight_layout()
-    fig.savefig("../documentation/comp_reg.pdf", pad_inches=0.0)
+    if predictions is not None:
+        for k, pred in predictions.items():
+            ax2.hist(pred, bins=bins, orientation='horizontal', histtype='step', color=color["blue"],
+                     label="Vorhersage: {}".format(k), linewidth=2)
+
+    ax2.hist(np.asarray(reference), bins=bins, orientation='horizontal', histtype='step', color=color["green"],
+             label="Referenz", linewidth=3)
+
+    ax2.spines['right'].set_visible(False)
+    ax2.spines['top'].set_visible(False)
+    ax2.set_xlabel("Anzahl")
+    #ax2.set_ylim([-40, 100])
+    #ax2.set_xlabel("Drehgeschwindigkeit [%]")
+    ax2.grid(color=gray, linestyle='-', linewidth='1')
+
+    fig.tight_layout()
+    fig.savefig("../documentation/comp.pdf", pad_inches=0.0)
     plt.show()
 
 
@@ -192,23 +170,12 @@ class PlotLearning(Callback):
 
 
 def plot_learning_curve(data_table, show_plot=True, fig_path=None):
-    color = {"green": "#85be48", "orange": "#ffa500", "blue": "#0fa3b1", "pink": "#6b2d5c",
-             "red_pink": "#9e0031", "turquoise": "#7afdd6"}
-    markers = ["o", "^", ">", "<", "v", "+"]
-    cc = itertools.cycle(color.values())
-    m = itertools.cycle(markers)
-
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(4.5, 6), sharex=True)
-    ax1.set_title("Fehlerverlauf", fontproperties=prop)
-    ax1.set_ylabel("Mean-Absolute-Error", fontproperties=prop)
-    ax1.spines['right'].set_visible(False)
-    ax1.spines['top'].set_visible(False)
-
-    ax2.set_title("Genauigkeitsverlauf", fontproperties=prop)
-    ax2.set_xlabel("Epochen", fontproperties=prop)
-    ax2.set_ylabel("Genauigkeit [\%]", fontproperties=prop)
-    ax2.spines['right'].set_visible(False)
-    ax2.spines['top'].set_visible(False)
+    #style.use('ggplot')
+    matplotlib.rc('font', **{'weight': 'normal', 'size': 8})
+    fig, ax = plt.subplots(1, 1, figsize=(4.5, 3))
+    ax.set_title("Fehlerverlauf")
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
 
     data_dict = {}
 
@@ -222,24 +189,15 @@ def plot_learning_curve(data_table, show_plot=True, fig_path=None):
 
     for run in data_dict.keys():
         label = run.replace("mobilenet_", "")
+        ax.plot(data_dict[run]["epoch"], data_dict[run]["loss"], label=label, color=next(colCyc), linewidth=2,
+                marker=next(marCyc))
 
-        if "cls" in run:
-            ax2.plot(data_dict[run]["epoch"], np.asarray(data_dict[run]["metric"])/0.01, label=label.replace("_", "\_"),
-                     color=next(cc), linewidth=1, marker=next(m), markersize=3, zorder=3)
-        elif "reg" in run:
-            ax1.plot(data_dict[run]["epoch"], np.asarray(data_dict[run]["loss"]), label=label.replace("_", "\_"),
-                     color=next(cc), linewidth=1, marker=next(m), markersize=3, zorder=3)
-
-
-    ax1.legend(fancybox=True, shadow=True, ncol=1)
-    ax2.legend(fancybox=True, shadow=True, ncol=1)
-    ax1.grid(color=gray, linestyle='-', linewidth='1', zorder=0)
-    ax2.grid(color=gray, linestyle='-', linewidth='1', zorder=0)
-    ax2.xaxis.set_major_locator(MaxNLocator(integer=True))
-    ax2.set_xlim([0, 20])
-    ax2.set_ylim([0, 40])
-    ax1.set_ylim([0.05, 0.40])
-
+    ax.set_xlabel("Epochen")
+    ax.set_ylabel("Mean-Absolute-Error")
+    ax.legend(fancybox=True, shadow=True, ncol=1)
+    ax.grid(color=gray, linestyle='-', linewidth='1')
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    ax.set_xlim([0, 20])
     fig.tight_layout()
 
     if fig_path is not None:
@@ -298,7 +256,7 @@ def prepare_learning_curve_plot(args):
 
 def prepare_comparison_plot(args):
     ref_dict = getImgAndCommandList(os.path.join(args.data_dir, args.ref_dir), onlyUseSubfolder="left_rect",
-                                    filterZeros=True, useDiscretCmds=args.use_discrete_cmds)
+                                    filterZeros=True, useDiscretCmds=args.useDiscretCmds)
 
     folders = sorted(list(set([os.path.basename(os.path.split(r["folderPath"])[-2]) for r in ref_dict])))
 
@@ -314,6 +272,7 @@ def prepare_comparison_plot(args):
 
     for v in args.val_dirs:
         json_file = os.path.join(args.run_dir, v, "predictions.json")
+        print(json_file)
 
         if os.path.exists(json_file):
             with open(json_file) as f:
@@ -329,43 +288,20 @@ def prepare_comparison_plot(args):
 
 
 def plot_control_balance(args):
-    ibg_train = ImageBatchGenerator(args.data_dir, multi_dir=args.val_dirs, shuffle=False, batch_size=1, crop=False)
-    ibg_test = ImageBatchGenerator(os.path.join(args.data_dir, "test_course_oldcfg"), shuffle=False, batch_size=1,
-                                   crop=False)
+    ibg = ImageBatchGenerator(args.data_dir, multi_dir=args.val_dirs, shuffle=False, batch_size=1, crop=False)
 
-    factor = 0.005
-    bins = np.asarray([-0.5, -0.375, -0.25, -0.125, -0.001, 0.001, 0.125, 0.25, 0.375, 0.5]) / factor
-    yticks = np.asarray([-0.5, -0.375, -0.25, -0.125, 0, 0.125, 0.25, 0.375, 0.5]) / factor
-    _ = next(cc)
-    _ = next(cc)
-    c1 = next(cc)
-    c2 = next(cc)
+    fig, ax = plt.subplots(1, 1)
+    ax.title("")
+    ax.ylabel("Anzahl")
+    ax.xlabel("Drehgeschwindigkeit [%]")
+    ax.hist(ibg.labels, bins=[-0.5, -0.001, 0.001, 0.5])
 
-    fig, ax = plt.subplots(1, 1, figsize=(4.5, 3))
-    ax.set_title("Steuerbefehl-Verteilung", fontproperties=prop)
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.set_xlabel("Anzahl", fontproperties=prop)
-    ax.set_ylabel("Gierrate [\%]", fontproperties=prop)
-    ax.grid(color=gray, linestyle='-', linewidth='1', zorder=0)
-    ax.set_yticks(yticks)
-    ax.hist(np.asarray(ibg_train.labels) / factor, label="Training", bins=bins, orientation='horizontal',
-            histtype="step", linewidth=2, color=c1, zorder=3)
-    ax.hist(np.asarray(ibg_test.labels) / factor, label="Test", bins=bins, orientation='horizontal', histtype="step",
-            linewidth=2, color=c2, zorder=3)
+    lower = np.less_equal(ibg.labels, 0.001)
+    higher = np.greater_equal(ibg.labels, -0.001)
+    between = lower & higher
 
-    counts_train, _ = np.histogram(np.asarray(ibg_train.labels) / factor, bins=bins)
-    counts_test, _ = np.histogram(np.asarray(ibg_test.labels) / factor, bins=bins)
-    print(np.sum(counts_train))
-    print(np.sum(counts_test))
+    print("Nr. of samples between {} and {}: {}".format(-0.001, 0.001, np.sum(between)))
 
-    ax.scatter(counts_train[4], 0, marker="x", color=c1, zorder=6)
-    ax.scatter(counts_test[4], 0, marker="x", color=c2, zorder=6)
-    ax.legend(fancybox=True, shadow=True, ncol=1)  # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
-    plt.show()
-
-    fig.tight_layout()
-    fig.savefig("../documentation/balance.pdf", pad_inches=0.0)
     plt.show()
 
 
@@ -383,56 +319,24 @@ if __name__ == '__main__':
     plot_parser.add_argument("--val_dirs", action="append", type=str, default=["mobilenet_reg_higher_lr"])
     plot_parser.add_argument("--show_plot", action="store", type=int, default=1)
     plot_parser.add_argument("--output_file", action="store", type=str, default="learning_curves")
-    plot_parser.add_argument("--use_discrete_cmds", action="store", type=int, default=0)
+    plot_parser.add_argument("--useDiscretCmds", action="store", type=bool, default=False)
     args = plot_parser.parse_args()
 
     if args.method == "comparison":
+        print(args.useDiscretCmds)
         prepare_comparison_plot(args)
     elif args.method == "learning_curve":
-        csv_file_reg = os.path.join(args.run_dir, "learning_curves_reg.csv")
-        csv_file_cls = os.path.join(args.run_dir, "learning_curves_cls.csv")
+        csv_file = os.path.join(args.run_dir, "{}.csv".format(args.output_file))
 
-        if os.path.exists(csv_file_reg) and os.path.exists(csv_file_cls):
-            data_arr_reg = np.genfromtxt(csv_file_reg, delimiter=",", encoding="utf8", skip_header=1,
-                                         dtype=[("run", "<U128"), ("epoch", np.int), ("loss", np.float32),
-                                                ("metric", np.float32), ("val_loss", np.float32),
-                                                ("val_metric", np.float32)])
-            data_arr_cls = np.genfromtxt(csv_file_cls, delimiter=",", encoding="utf8", skip_header=1,
-                                         dtype=[("run", "<U128"), ("epoch", np.int), ("loss", np.float32),
-                                                ("metric", np.float32), ("val_loss", np.float32),
-                                                ("val_metric", np.float32)])
-            data_arr = np.concatenate([data_arr_cls, data_arr_reg], axis=0)
-
-            plot_learning_curve(data_arr, fig_path=os.path.join(args.run_dir, "learning_curves.pdf"))
+        if os.path.exists(csv_file):
+            data_arr = np.genfromtxt(csv_file, delimiter=",", encoding="utf8", skip_header=1,
+                                     dtype=[("run", "<U128"), ("epoch", np.int), ("loss", np.float32),
+                                            ("metric", np.float32), ("val_loss", np.float32),
+                                            ("val_metric", np.float32)])
+            plot_learning_curve(data_arr, fig_path=os.path.join(args.run_dir, "{}.pdf".format(args.output_file)))
         else:
             prepare_learning_curve_plot(args)
     elif args.method == "balance":
         plot_control_balance(args)
-    elif args.method == "quad":
-        fig = plt.figure(figsize=(4.5, 4.5))
-
-        plt.subplot(221)
-        plt.title("Vortrainiert", fontproperties=prop)
-        img = Image.open("../documentation/so_reg_hlr.jpg")
-        plt.imshow(np.uint8(img), cmap="jet")
-        plt.ylabel("Regression")
-
-        plt.subplot(222)
-        plt.title('Zuf{\\"a}llig initialisiert', fontproperties=prop)
-        img = Image.open("../documentation/so_reg_nphlr.jpg")
-        plt.imshow(np.uint8(img), cmap="jet")
-
-        plt.subplot(223)
-        img = Image.open("../documentation/so_cls_hlr.jpg")
-        plt.imshow(np.uint8(img), cmap="jet")
-        plt.ylabel("Klassifikation", fontproperties=prop)
-
-        plt.subplot(224)
-        img = Image.open("../documentation/so_cls_nphlr.jpg")
-        plt.imshow(np.uint8(img), cmap="jet")
-
-        fig.tight_layout()
-        fig.savefig("../documentation/sa_quad.pdf", pad_inches=0.0)
-        plt.show()
     else:
         raise NotImplementedError("The method '{}' is not implemented".format(args.method))

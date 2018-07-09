@@ -1,6 +1,7 @@
 import os
 import sys
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 import itertools
 from datetime import datetime
 from builtins import str
@@ -44,7 +45,8 @@ def plotCmd(imgAndCmdList):
 
     # set font
     #plt.rc('text', usetex=True)
-    plt.rc('font', family='Arial')
+    plt.rc('font', family='Arial', size=10)
+    prop = fm.FontProperties(family="Arial", size=10)
 
     # plot figure
     fig = plt.figure(figsize=(5, 4)) 
@@ -74,6 +76,7 @@ def plotCmd(imgAndCmdList):
     # axis labels
     ax.set_xlabel('Zeit [s]')
     ax.set_ylabel('Gierrate [ %]')
+    ax.set_title("Zuordnung Steuerbefehle und Bilder", fontproperties=prop)
     
     for i, imgAndCmdDict in enumerate(imgAndCmdList[start:end]):
         imgTime = imgAndCmdDict["delay"]
@@ -102,7 +105,7 @@ def plotCmd(imgAndCmdList):
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.23),
               fancybox=True, shadow=True, ncol=1)
 
-    plt.savefig('cmds_presentation.pdf')
+    plt.savefig('cmds_presentation.pdf', pad_inches=0.0)
         
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),

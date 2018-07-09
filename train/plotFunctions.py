@@ -380,7 +380,7 @@ if __name__ == '__main__':
     plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--run", action="append", type=str, default=[])
     plot_parser.add_argument("--val_dir", action="store", type=str, default="test_course_oldcfg")
-    plot_parser.add_argument("--val_dirs", action="append", type=str, default=["mobilenet_cls_no_pretrain_c5"])
+    plot_parser.add_argument("--val_dirs", action="append", type=str, default=["train_lane", "train_lane_curve", "train_lane_outer_correction", "train_lane_inner_correction"]) # "mobilenet_cls_no_pretrain_c5"
     plot_parser.add_argument("--show_plot", action="store", type=int, default=1)
     plot_parser.add_argument("--output_file", action="store", type=str, default="learning_curves")
     plot_parser.add_argument("--use_discrete_cmds", action="store", type=int, default=1)

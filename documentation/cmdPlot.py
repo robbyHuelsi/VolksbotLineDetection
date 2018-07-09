@@ -43,11 +43,11 @@ def plotCmd(imgAndCmdList):
     cc = itertools.cycle(color.values())
 
     # set font
-    plt.rc('text', usetex=True)
-    plt.rc('font', family='serif')
+    #plt.rc('text', usetex=True)
+    plt.rc('font', family='Arial')
 
     # plot figure
-    fig = plt.figure(figsize=(4.5, 3.5)) 
+    fig = plt.figure(figsize=(5, 4)) 
     ax = plt.subplot(111)
         
     # set the y-spine (see below for more info on `set_position`)
@@ -73,7 +73,7 @@ def plotCmd(imgAndCmdList):
     
     # axis labels
     ax.set_xlabel('Zeit [s]')
-    ax.set_ylabel('Gierrate [\%]')
+    ax.set_ylabel('Gierrate [ %]')
     
     for i, imgAndCmdDict in enumerate(imgAndCmdList[start:end]):
         imgTime = imgAndCmdDict["delay"]
@@ -102,7 +102,7 @@ def plotCmd(imgAndCmdList):
     ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.23),
               fancybox=True, shadow=True, ncol=1)
 
-    plt.savefig(os.path.join('cmds.pdf'))
+    plt.savefig('cmds_presentation.pdf')
         
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),

@@ -21,7 +21,7 @@ import locale
 
 # Set default latex and german plot settings
 #locale.setlocale(locale.LC_NUMERIC, "de_DE.utf8")
-#matplotlib.rc('font', family='serif')
+#matplotlib.rc('font', family='arial')
 #matplotlib.rc('text', usetex=True)
 #matplotlib.rcParams['axes.formatter.use_locale'] = True
 
@@ -341,12 +341,12 @@ def plot_control_balance(args):
     c1 = next(cc)
     c2 = next(cc)
 
-    fig, ax = plt.subplots(1, 1, figsize=(4.5, 3))
+    fig, ax = plt.subplots(1, 1, figsize=(5, 4))
     ax.set_title("Steuerbefehl-Verteilung", fontproperties=prop)
     ax.spines['right'].set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.set_xlabel("Anzahl", fontproperties=prop)
-    ax.set_ylabel("Gierrate [\%]", fontproperties=prop)
+    ax.set_ylabel("Gierrate [%]", fontproperties=prop)
     ax.grid(color=gray, linestyle='-', linewidth='1', zorder=0)
     ax.set_yticks(yticks)
     ax.hist(np.asarray(ibg_train.labels) / factor, label="Training", bins=bins, orientation='horizontal',
@@ -365,13 +365,13 @@ def plot_control_balance(args):
     plt.show()
 
     fig.tight_layout()
-    fig.savefig("../documentation/balance.pdf", pad_inches=0.0)
+    fig.savefig("../documentation/balance_presentation.pdf", pad_inches=0.0)
     plt.show()
 
 
 if __name__ == '__main__':
     plot_parser = argparse.ArgumentParser("Plot the learning curve etc. for trained networks")
-    plot_parser.add_argument("--method", action="store", type=str, default="comparison")
+    plot_parser.add_argument("--method", action="store", type=str, default="balance")
     plot_parser.add_argument("--data_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
                                                                                           "volksbot/data"))
     plot_parser.add_argument("--run_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),

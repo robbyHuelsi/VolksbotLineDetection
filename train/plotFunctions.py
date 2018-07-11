@@ -47,7 +47,7 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4), sharey=True, gridspec_kw={"width_ratios": [3, 1]})
 
-    ax1.set_title("Steuerbefehl Vergleich - Verlauf", fontproperties=prop)
+    ax1.set_title("Steuerbefehl-Verlauf", fontproperties=prop)
     ax1.spines['right'].set_visible(False)
     ax1.spines['top'].set_visible(False)
     # ax1.set_ylabel("Gierrate [\%] (Klassen-Nr.)", fontproperties=prop)
@@ -351,8 +351,8 @@ def plot_control_balance(args):
     ax.set_yticks(yticks)
     ax.hist(np.asarray(ibg_train.labels) / factor, label="Training", bins=bins, orientation='horizontal',
             histtype="step", linewidth=2, color=c1, zorder=3)
-    ax.hist(np.asarray(ibg_test.labels) / factor, label="Test", bins=bins, orientation='horizontal', histtype="step",
-            linewidth=2, color=c2, zorder=3)
+    #ax.hist(np.asarray(ibg_test.labels) / factor, label="Test", bins=bins, orientation='horizontal', histtype="step",
+    #        linewidth=2, color=c2, zorder=3)
 
     counts_train, _ = np.histogram(np.asarray(ibg_train.labels) / factor, bins=bins)
     counts_test, _ = np.histogram(np.asarray(ibg_test.labels) / factor, bins=bins)
@@ -360,7 +360,7 @@ def plot_control_balance(args):
     print(np.sum(counts_test))
 
     ax.scatter(counts_train[4], 0, marker="x", color=c1, zorder=6)
-    ax.scatter(counts_test[4], 0, marker="x", color=c2, zorder=6)
+    #ax.scatter(counts_test[4], 0, marker="x", color=c2, zorder=6)
     ax.legend(fancybox=True, shadow=True, ncol=1)  # loc='lower center') #, bbox_to_anchor=(0.5, 1.5))
     plt.show()
 
@@ -371,7 +371,7 @@ def plot_control_balance(args):
 
 if __name__ == '__main__':
     plot_parser = argparse.ArgumentParser("Plot the learning curve etc. for trained networks")
-    plot_parser.add_argument("--method", action="store", type=str, default="balance")
+    plot_parser.add_argument("--method", action="store", type=str, default="comparison")
     plot_parser.add_argument("--data_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
                                                                                           "volksbot/data"))
     plot_parser.add_argument("--run_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
@@ -380,10 +380,10 @@ if __name__ == '__main__':
     plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--run", action="append", type=str, default=[])
     plot_parser.add_argument("--val_dir", action="store", type=str, default="test_course_oldcfg")
-    plot_parser.add_argument("--val_dirs", action="append", type=str, default=["train_lane", "train_lane_curve", "train_lane_outer_correction", "train_lane_inner_correction"]) # "mobilenet_cls_no_pretrain_c5"
+    plot_parser.add_argument("--val_dirs", action="append", type=str, default=[]) # "mobilenet_cls_no_pretrain_c5" # "train_lane", "train_lane_curve", "train_lane_outer_correction", "train_lane_inner_correction"
     plot_parser.add_argument("--show_plot", action="store", type=int, default=1)
     plot_parser.add_argument("--output_file", action="store", type=str, default="learning_curves")
-    plot_parser.add_argument("--use_discrete_cmds", action="store", type=int, default=1)
+    plot_parser.add_argument("--use_discrete_cmds", action="store", type=int, default=0)
     args = plot_parser.parse_args()
 
     if args.method == "comparison":

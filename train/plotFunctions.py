@@ -20,10 +20,10 @@ import matplotlib.font_manager as fm
 import locale
 
 # Set default latex and german plot settings
-locale.setlocale(locale.LC_NUMERIC, "de_DE.utf8")
-matplotlib.rc('font', family='serif')
-matplotlib.rc('text', usetex=True)
-matplotlib.rcParams['axes.formatter.use_locale'] = True
+#locale.setlocale(locale.LC_NUMERIC, "de_DE.utf8")
+#matplotlib.rc('font', family='serif')
+#matplotlib.rc('text', usetex=True)
+#matplotlib.rcParams['axes.formatter.use_locale'] = True
 
 gray = "#8a8b8a"
 light_orange = "#ffe0b5"
@@ -32,8 +32,8 @@ color = {"black": "#000000", "green":  "#85be48",  "orange": "#ffa500", "blue": 
 markers = ["o", "^", ">", "<", "v", "s", "+"]
 cc = itertools.cycle(color.values())
 m = itertools.cycle(markers)
-prop = fm.FontProperties(fname='/home/florian/Downloads/computer-modern/cmunrm.ttf', size=10)
-#prop = fm.FontProperties(family="Computer Modern Serif Roman", size=10)
+#prop = fm.FontProperties(fname='/home/florian/Downloads/computer-modern/cmunrm.ttf', size=10)
+prop = fm.FontProperties(family="Computer Modern Serif Roman", size=10)
 
 
 def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.005, start_ind=0, end_ind=None):
@@ -389,27 +389,46 @@ if __name__ == '__main__':
         fig = plt.figure(figsize=(4.5, 4.5))
 
         plt.subplot(221)
-        plt.title("Regression (vortrainiert)", fontproperties=prop)
+        plt.title("Vortrainiert", fontproperties=prop)
         img = Image.open("../documentation/so_reg_hlr.jpg")
         plt.imshow(np.uint8(img), cmap="jet")
+        plt.ylabel("Regression", fontproperties=prop)
 
         plt.subplot(222)
-        plt.title("Regression (zufaellig)", fontproperties=prop)
+        plt.title("Zufällig initialisiert", fontproperties=prop)
         img = Image.open("../documentation/so_reg_nphlr.jpg")
         plt.imshow(np.uint8(img), cmap="jet")
 
         plt.subplot(223)
-        plt.title("Klassifikation (vortrainiert)", fontproperties=prop)
         img = Image.open("../documentation/so_cls_hlr.jpg")
         plt.imshow(np.uint8(img), cmap="jet")
+        plt.ylabel("Klassifikation", fontproperties=prop)
 
         plt.subplot(224)
-        plt.title("Klassifikation (zufaellig)", fontproperties=prop)
         img = Image.open("../documentation/so_cls_nphlr.jpg")
         plt.imshow(np.uint8(img), cmap="jet")
 
         fig.tight_layout()
         fig.savefig("../documentation/sa_quad.pdf", pad_inches=0.0)
+        plt.show()
+    elif args.method == "nonlinearities":
+        def sigmoid(x):
+            return 1 / (1 + np.exp(-x))
+
+        x = np.linspace(-10, 10, 1000)
+        relu = np.maximum(0, x)
+        relu6 = np.minimum(np.maximum(0, x), 6)
+        sig = sigmoid(x)
+        tan_h = np.tanh(x)
+
+        plt.figure(dpi=200)
+        plt.plot(x, relu, label="ReLU")
+        plt.plot(x, relu6, label="ReLU 6", linestyle="--")
+        plt.plot(x, sig, label="Sigmoid")
+        plt.plot(x, tan_h, label="Tangens Hyperbolicus")
+        plt.legend()
+        plt.grid(color=gray, linestyle='-', linewidth='1')
+        plt.savefig("../documentation/nonlins.png", dpi=200)
         plt.show()
     else:
         raise NotImplementedError("The method '{}' is not implemented".format(args.method))

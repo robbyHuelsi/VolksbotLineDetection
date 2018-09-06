@@ -28,9 +28,19 @@ class ImgAndCmdWindow():
         self._job = None  # Necessary for changing scale value by hand
         self.player = None
 
-        # self.inputbox.state("zoomed")
-        self.windowWidth = 1200
+        self.window.config(bg = 'black')
 
+        # self.inputbox.state("zoomed")
+        self.windowWidth = 1280
+
+        style = Style()
+        style.theme_use('alt')
+        style.configure("trueNeg.Horizontal.TProgressbar",
+                        troughcolor='dark green', background="black", thickness=32)
+        style.configure("truePos.Horizontal.TProgressbar",
+                        troughcolor="black", background='dark green', thickness=33)
+        style.configure("true.Label", background="black", foreground='dark green', font=("Helvetica", 30))
+        
         
         self.window.title("Autonomous Volksbot")
 
@@ -39,57 +49,77 @@ class ImgAndCmdWindow():
         self.omSubfolders = OptionMenu(self.window, self.svSubfolders,
                                        *(["", "All folders"] + [d["folderPath"] for d in subfolderList]),
                                        command=self._omSubfoldersChanged)
-        self.omSubfolders.grid(row=0, columnspan=3, sticky="EW")
+        self.omSubfolders.grid(row=0, columnspan=9, sticky="EW")
 
         self.lImgFrame = Label(self.window)
-        self.lImgFrame.grid(row=1, columnspan=3)
+        self.lImgFrame.grid(row=1, columnspan=9)
+        
+        self.pbTrueVelYawNeg = Progressbar(self.window, orient=HORIZONTAL,
+                                           length=4.0*(self.windowWidth/9)+32, mode="determinate",
+                                           style="trueNeg.Horizontal.TProgressbar")
+        self.pbTrueVelYawNeg["maximum"] = 1
+        self.pbTrueVelYawNeg["value"] = 0
+        self.pbTrueVelYawNeg.grid(row=1, column=0, columnspan=3, sticky="S")
+        
+
+        self.pbTrueVelYawPos = Progressbar(self.window, orient=HORIZONTAL,
+                                           length=4.0*(self.windowWidth/9)+32, mode="determinate",
+                                           style="truePos.Horizontal.TProgressbar")
+        self.pbTrueVelYawPos["maximum"] = 1
+        self.pbTrueVelYawPos["value"] = 0
+        self.pbTrueVelYawPos.grid(row=1, column=5, columnspan=3, sticky="S")
+
+
+        self.svTrueVelYaw = StringVar(value="0 %")
+        Label(self.window, textvariable=self.svTrueVelYaw, style="true.Label", width=5, anchor="center").grid(row=1, column=4, sticky="S")
+        
 
         self.scaleFrameNumber = Scale(self.window, from_=0,
                             to=1,
                             length=self.windowWidth, orient=HORIZONTAL,
                             command=self._scaleFrameNumberChanged)
-        self.scaleFrameNumber.grid(row=2, columnspan=3)
+        self.scaleFrameNumber.grid(row=3, columnspan=9)
 
         bBackward = Button(self.window, text="Backward",
                            width=10, command=self._bBackwardClicked)
-        bBackward.grid(row=3, column=0, sticky="W")
+        bBackward.grid(row=4, column=0, columnspan=3, sticky="W")
 
         bForward = Button(self.window, text="Forward",
                           width=10, command=self._bForwardClicked)
-        bForward.grid(row=3, column=2, sticky="E")
+        bForward.grid(row=4, column=6, columnspan=3, sticky="E")
 
         self.bPlayStop = Button(self.window, text="Play",
                                 width=10, command=self._bPlayPausedClicked)
-        self.bPlayStop.grid(row=3, column=1)
+        self.bPlayStop.grid(row=4, column=3, columnspan=3)
         
         self.svPath = StringVar(value="/path/to/img")
         self.svDate = StringVar(value="dd.mm.yyyy hh:mm:ss xxxx")
         self.svFrameNumber = StringVar(value="x of i")
         
         bShowPlot = Button(self.window, text="Show Plot", width=10, command=self._bShowPlotClicked)
-        bShowPlot.grid(row=4, column=2, sticky="E")
+        bShowPlot.grid(row=5, column=6, columnspan=3, sticky="E")
         
         self.bShowInfo = Button(self.window,
                                 text="Hide Info" if self.showInfo else "Show Info",
                                 width=10, command=self._bShowInfoClicked)
-        self.bShowInfo.grid(row=4, column=1)
+        self.bShowInfo.grid(row=5, column=3, columnspan=3)
 
         self.infoFrame = None
         if self.showInfo: self.drawInfoFrame()
 
-        second_win = Toplevel()
-        self.cmdWindow = ImgAndCmdWindow.CmdWindow(second_win)
-        second_win.update_idletasks()
-        size = tuple(int(_) for _ in second_win.geometry().split('+')[0].split('x'))
-        second_win.geometry("%dx%d+%d+%d" % (size + (3510, 400)))
+        #second_win = Toplevel()
+        #self.cmdWindow = ImgAndCmdWindow.CmdWindow(second_win)
+        #second_win.update_idletasks()
+        #size = tuple(int(_) for _ in second_win.geometry().split('+')[0].split('x'))
+        #second_win.geometry("%dx%d+%d+%d" % (size + (3510, 400)))
 
         # self.window.protocol("WM_DELETE_WINDOW", self.onClosing())
         self.updateViewForSubfolderFilter()
         self.updateViewForFrame()
         
-        self.window.update_idletasks()
-        size = tuple(int(_) for _ in self.window.geometry().split('+')[0].split('x'))
-        self.window.geometry("%dx%d+%d+%d" % (size + (2220, 100)))
+        #self.window.update_idletasks()
+        #size = tuple(int(_) for _ in self.window.geometry().split('+')[0].split('x'))
+        #self.window.geometry("%dx%d+%d+%d" % (size + (2220, 100)))
         
         self.window.mainloop()
         
@@ -101,7 +131,7 @@ class ImgAndCmdWindow():
         Label(self.infoFrame, textvariable=self.svDate).grid(sticky="W", row=1, column=1)
         Label(self.infoFrame, text="Frame: ").grid(sticky="E", row=2, column=0)
         Label(self.infoFrame, textvariable=self.svFrameNumber).grid(sticky="W", row=2, column=1)
-        self.infoFrame.grid(row=5, column=0, columnspan=3, sticky="EW")
+        self.infoFrame.grid(row=6, column=0, columnspan=3, sticky="EW")
 
     def updateViewForSubfolderFilter(self):
         self.scaleFrameNumber.set(0)
@@ -143,8 +173,11 @@ class ImgAndCmdWindow():
         
         
         self.scaleFrameNumber.set(self.frameNumber)
-
-        self.cmdWindow.updateViewForFrame(trueVelX, trueVelYaw, predVelX, predVelYaw)
+        
+        #self.cmdWindow.updateViewForFrame(trueVelX, trueVelYaw, predVelX, predVelYaw)
+        self.pbTrueVelYawPos["value"] = trueVelYaw if trueVelYaw > 0.0 else 0
+        self.pbTrueVelYawNeg["value"] = 1.0 + trueVelYaw if trueVelYaw < 0.0 else 1
+        self.svTrueVelYaw.set(str(round(trueVelYaw*100)) + " %")
 
     def applySubfolderFilter(self, folderPath=None):
         if not folderPath:
@@ -411,21 +444,17 @@ class ImgAndCmdWindow():
 
 if __name__ == "__main__":
     recordingsFolder = os.path.join(os.path.expanduser("~"),
-                                    "volksbot", "data", "test_course_oldcfg")
-    predictionsJsonPath = os.path.join(os.path.expanduser("~"),
-                                       "volksbot", "test_course_predictions",
-                                       "mobilenet_reg_higher_lr.json")
-    '''
-    recordingsFolder = os.path.join(os.path.expanduser("~"),
-                                    "recordings_vs")
-    '''
+                                    "volksbot", "data", "aufnahmen_2018_05_22")
+    #predictionsJsonPath = os.path.join(os.path.expanduser("~"),
+    #                                   "volksbot", "test_course_predictions",
+    #                                   "mobilenet_cls_aug.json")
 
     imgAndCmdList = ifu.getImgAndCommandList(recordingsFolder,
                                              onlyUseSubfolder="left_rect",
-                                             filterZeros=True,
+                                             filterZeros=False,
                                              useDiscretCmds=False)
-    imgAndCmdList = ifu.addPredictionsToImgAndCommandList(imgAndCmdList,
-                                                          predictionsJsonPath,
-                                                          roundNdigits=0)
+    #imgAndCmdList = ifu.addPredictionsToImgAndCommandList(imgAndCmdList,
+    #                                                      predictionsJsonPath,
+    #                                                      roundNdigits=0)
     subfoldersList = ifu.getSubfolderListOfImgAndCommandList(imgAndCmdList)
-    app = ImgAndCmdWindow(imgAndCmdList, subfoldersList, showInfo=True)
+    app = ImgAndCmdWindow(imgAndCmdList, subfoldersList, showInfo=False)

@@ -161,6 +161,20 @@ class MultLayer(Layer):
         return input_shape
 
 
+class AddLayer(Layer):
+    def __init__(self, **kwargs):
+        super(AddLayer, self).__init__(**kwargs)
+
+    def build(self, input_shape):
+        super(AddLayer, self).build(input_shape)
+
+    def call(self, x, **kwargs):
+        return x + kwargs["y"]
+
+    def compute_output_shape(self, input_shape):
+        return input_shape
+
+
 def build_salient_model(our_model):
     activation_layers = get_layers(our_model, "relu")
 
@@ -174,7 +188,7 @@ def build_salient_model(our_model):
         if current.get_shape()[1] != previous.get_shape()[1]:
             previous = UpsamplingLayer()(previous)
 
-        activation_layers[i]["mean_actv"] = MultLayer()(previous, y=current)
+        activation_layers[i]["mean_actv"] = AddLayer()(previous, y=current)
 
     last = UpsamplingLayer()(activation_layers[0]["mean_actv"])
     model = Model(inputs=our_model.layers[0].output, outputs=last)
@@ -262,6 +276,7 @@ if __name__ == '__main__':
             plt.imshow(pred[0, :, :, 0], cmap="plasma")
             plt.show()
         else:
+            assert args.data_dir
             ibg = ImageBatchGenerator(args.data_dir, preprocess_input=preprocess_input, labeled=False, shuffle=False,
                                       crop=False, batch_size=1)
             preds = model.predict_generator(ibg, verbose=1)

@@ -1,6 +1,6 @@
 import numpy as np
 from keras.models import Model
-from keras.layers import Input, Dense, Flatten, GlobalAveragePooling2D, Reshape, Dropout, Conv2D
+from keras.layers import Input, Dense, Flatten, GlobalAveragePooling2D, Reshape, Dropout, Conv2D, Activation
 from keras.optimizers import Adam
 from keras.regularizers import l1
 from keras.utils import to_categorical
@@ -28,10 +28,9 @@ class MobileNetCls(HelperAPI):
 
     def postprocess_output(self, output):
         cls = np.argmax(output, axis=1)
-        #ctrl_values = [-0.75, -0.375, -0.175, -0.0505, 0, 0.0505, 0.175, 0.375, 0.75]	## 9 classes
-        ctrl_values = [-0.4375, -0.3125, -0.1875, -0.0625, 0, 0.0625, 0.1875, 0.3125, 0.4375]	## 9 classes
-        #ctrl_values = [-0.9, -0.7, -0.5, -0.3, -0.0995, 0, 0.0995, 0.3, 0.5, 0.7, 0.9]	## 11 classes
-        #ctrl_values = [-0.95, -0.85, -0.75, -0.65, -0.55, -0.45, -0.35, -0.25, -0.15, -0.0505, 0, 0.0505, 0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95]	## 21 classes
+        #ctrl_values = [-0.375, -0.125, 0.000, 0.125, 0.375]    ## 5 classes
+        ctrl_values = [-0.4375, -0.3125, -0.1875, -0.0625, 0.0000, 0.0625, 0.1875, 0.3125, 0.4375]    ## 9 classes
+        #ctrl_values = [-0.475, -0.425, -0.375, -0.325, -0.275, -0.225, -0.175, -0.125, -0.075, -0.025, 0.000, 0.025, 0.075, 0.125, 0.175, 0.225, 0.275, 0.325, 0.375, 0.425, 0.475]    ## 21 classes
         result = [ctrl_values[c] for c in cls]
 
         return result
@@ -59,31 +58,18 @@ class MobileNetCls(HelperAPI):
         reg = l1(args.regularize) if for_training else l1(0.0)
         dropout = args.dropout if for_training else 0.5
 
-        # Extend mobilenet by own fully connected layer
-        x = mobnet_basic.layers[-1].output
-        x = GlobalAveragePooling2D()(x)
-        x = Reshape((1, 1, 1024), name='reshape_1')(x)
-        x = Dropout(dropout, name='dropout')(x)
-        # x = Conv2D(49, (1, 1), padding='same', name='pre_predictions', activation='relu',
-        #            kernel_regularizer=reg, bias_regularizer=reg)(x)
-        x = Conv2D(num_classes, (1, 1), padding='same', name='predictions', activation='softmax',
-                   kernel_regularizer=reg, bias_regularizer=reg)(x)
-        predictions = Flatten()(x)
-
         # Extend mobile net by own fully connected layer
-        # x = mobnet_basic.layers[-1].output
+        x = mobnet_basic.layers[-1].output
 
         # TODO Evaluate if the original layers from MobileNet bring better performance/accuracy
-        # x = GlobalAveragePooling2D()(x)
-        # x = Reshape((1, 1, 1024), name='reshape_1')(x)
-        # x = Dropout(0.5, name='dropout')(x)
-        # x = Conv2D(num_classes, (1, 1), padding='same', name='conv_preds')(x)
-        # x = Activation('softmax', name='act_softmax')(x)
-        # x = Flatten()(x)
+        x = GlobalAveragePooling2D()(x)
+        x = Reshape((1, 1, 1024), name='reshape_1')(x)
+        x = Dropout(0.5, name='dropout')(x)
+        x = Conv2D(num_classes, (1, 1), padding='same', name='conv_preds')(x)
+        x = Activation('softmax', name='act_softmax')(x)
+        predictions = Flatten()(x)
 
-        # x = Flatten()(x)
-        #predictions = Dense(num_classes, activation='softmax', name='predictions')(x)
-
+        # predictions = Dense(num_classes, activation='softmax', name='predictions')(x)
         mobnet_extended = Model(inputs=input_tensor, outputs=predictions, name='mobilenet_cls')
 
         # Finalize the model by compiling it
@@ -94,8 +80,14 @@ class MobileNetCls(HelperAPI):
         return mobnet_extended
 
 
-def getVelYawClas(avVelYaw, minYaw=-0.5, maxYaw=0.5, classes=9):	###################################################################################
+def getVelYawClas(avVelYaw, minYaw=-0.5, maxYaw=0.5, classes=9):    ###################################################################################
     avVelYaw = np.clip(avVelYaw, minYaw, maxYaw)
+
+    #if minYaw <= avVelYaw < minYaw / 2:    velYawClass = 0
+    #if minYaw / 2 <= avVelYaw < -0.001:    velYawClass = 1
+    #if -0.001 <= avVelYaw <= 0.001:        velYawClass = 2
+    #if 0.001 < avVelYaw <= maxYaw / 2:    velYawClass = 3
+    #if maxYaw / 2 < avVelYaw <= maxYaw:    velYawClass = 4
 
     # TODO Is there a smarter way to do it?
     if minYaw <= avVelYaw < 3 * minYaw / 4:			velYawClass = 0
@@ -144,7 +136,7 @@ def getVelYawClas(avVelYaw, minYaw=-0.5, maxYaw=0.5, classes=9):	###############
     return velYawClass
 
 
-def oneHotEncode(velYawClass, classes=9):	###########################################################################################################
+def oneHotEncode(velYawClass, classes=9):    ###########################################################################################################
     encoded = to_categorical(velYawClass, num_classes=classes)
     return encoded
 

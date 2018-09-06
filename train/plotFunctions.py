@@ -21,7 +21,7 @@ import locale
 
 # Set default latex and german plot settings
 #locale.setlocale(locale.LC_NUMERIC, "de_DE.utf8")
-#matplotlib.rc('font', family='serif')
+#matplotlib.rc('font', family='arial')
 #matplotlib.rc('text', usetex=True)
 #matplotlib.rcParams['axes.formatter.use_locale'] = True
 
@@ -33,7 +33,9 @@ markers = ["o", "^", ">", "<", "v", "s", "+"]
 cc = itertools.cycle(color.values())
 m = itertools.cycle(markers)
 #prop = fm.FontProperties(fname='/home/florian/Downloads/computer-modern/cmunrm.ttf', size=10)
-prop = fm.FontProperties(family="Computer Modern Serif Roman", size=10)
+prop = fm.FontProperties(family="Arial", size=10)
+#prop = fm.FontProperties(fname='/home/florian/Downloads/computer-modern/cmunrm.ttf', size=10)
+#prop = fm.FontProperties(family="Computer Modern Serif Roman", size=10)
 
 
 def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.005, start_ind=0, end_ind=None):
@@ -45,7 +47,7 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
     yticks = np.asarray([-0.5, -0.375, -0.25, -0.125, 0.0, 0.125, 0.25, 0.375, 0.5]) / factor
     #yticks = np.asarray([-0.4375, -0.3125, -0.1875, -0.0625, 0, 0.0625, 0.1875, 0.3125, 0.4375]) / factor
 
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 3), sharey=True, gridspec_kw={"width_ratios": [3, 1]})
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 4), sharey=True, gridspec_kw={"width_ratios": [3, 1]})
 
     ax1.set_title("Steuerbefehl Vergleich - Verlauf", fontproperties=prop)
     ax1.spines['right'].set_visible(False)
@@ -62,9 +64,9 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
     ax2.set_xlabel("Anzahl", fontproperties=prop)
     ax2.set_yticks(yticks)
 
-    #vals = ax.get_yticks()
-    #vals = [str(int(x * 100)) for x in vals]
-    #ax2.set_yticklabels(["{} ({})".format(a, i) for i, a in enumerate(yticks)])
+    # vals = ax.get_yticks()
+    # vals = [str(int(x * 100)) for x in vals]
+    # ax2.set_yticklabels(["{} ({})".format(a, i) for i, a in enumerate(yticks)])
 
     # ax2.set_ylim([-80, 100])
     ax2.grid(color=gray, linestyle='-', linewidth='1', zorder=0)
@@ -92,6 +94,7 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
     if predictions is not None:
         for k, pred in predictions.items():
             c = next(cc)
+            # Vorhersage = Berechnete Steuerbefehle
             ax1.plot(range(dps), pred, label="Vorhersage: {}".format(k.replace("mobilenet_", "").
                                                                      replace("_", "\_")),
                      color=c, linewidth=1)
@@ -100,6 +103,7 @@ def plot_ref_pred_comparison(reference, predictions=None, filter=None, factor=0.
             pred_hist, _ = np.histogram(pred, bins)
             ax2.scatter(pred_hist[4], 0.0, marker="x", color=c, zorder=6)
 
+    # Reference plot are the recorded controls
     ax1.plot(range(dps), reference, label="Referenz", color=black, linewidth=2)
 
     ref_hist, _ = np.histogram(reference, bins)
@@ -384,11 +388,11 @@ def plot_control_balance(args):
 if __name__ == '__main__':
     plot_parser = argparse.ArgumentParser("Plot the learning curve etc. for trained networks")
     plot_parser.add_argument("--method", action="store", type=str, default="comparison")
-    plot_parser.add_argument("--data_dir", action="store", type=str, default="C:/Development/volksbot/"
-                                                                             "autonomerVolksbot/data")
-    plot_parser.add_argument("--run_dir", action="store", type=str, default="C:/Development/volksbot/"
-                                                                            "autonomerVolksbot/run")
     plot_parser.add_argument("--session_dir", action="store", type=str, default="mobilenet_reg_lane_v13")
+    plot_parser.add_argument("--data_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
+                                                                                          "volksbot/data"))
+    plot_parser.add_argument("--run_dir", action="store", type=str, default=os.path.join(os.path.expanduser("~"),
+                                                                                         "volksbot/run"))
     plot_parser.add_argument("--ref_dir", action="store", type=str, default="test_course_oldcfg")
     plot_parser.add_argument("--run", action="append", type=str, default=[])
     plot_parser.add_argument("--val_dir", action="store", type=str, default="test_course_oldcfg")

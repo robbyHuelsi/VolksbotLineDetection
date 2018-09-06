@@ -79,17 +79,17 @@ class ImgAndCmdWindow():
 
         second_win = Toplevel()
         self.cmdWindow = ImgAndCmdWindow.CmdWindow(second_win)
-        second_win.update_idletasks()
-        size = tuple(int(_) for _ in second_win.geometry().split('+')[0].split('x'))
-        second_win.geometry("%dx%d+%d+%d" % (size + (3510, 400)))
+        #second_win.update_idletasks()
+        #size = tuple(int(_) for _ in second_win.geometry().split('+')[0].split('x'))
+        #second_win.geometry("%dx%d+%d+%d" % (size + (3510, 400)))
 
         # self.window.protocol("WM_DELETE_WINDOW", self.onClosing())
         self.updateViewForSubfolderFilter()
         self.updateViewForFrame()
         
-        self.window.update_idletasks()
-        size = tuple(int(_) for _ in self.window.geometry().split('+')[0].split('x'))
-        self.window.geometry("%dx%d+%d+%d" % (size + (2220, 100)))
+        #self.window.update_idletasks()
+        #size = tuple(int(_) for _ in self.window.geometry().split('+')[0].split('x'))
+        #self.window.geometry("%dx%d+%d+%d" % (size + (2220, 100)))
         
         self.window.mainloop()
         
@@ -428,4 +428,4 @@ if __name__ == "__main__":
                                                           predictionsJsonPath,
                                                           roundNdigits=0)
     subfoldersList = ifu.getSubfolderListOfImgAndCommandList(imgAndCmdList)
-    app = ImgAndCmdWindow(imgAndCmdList, subfoldersList, showInfo=True)
+    app = ImgAndCmdWindow(imgAndCmdList, subfoldersList, showInfo=False)

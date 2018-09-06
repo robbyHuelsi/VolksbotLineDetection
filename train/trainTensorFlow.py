@@ -210,35 +210,4 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(parser.parse_args(["--model_file", "mobilenet_cls",
-                            "--run_dir", "C:/Development/volksbot/autonomerVolksbot/run",
-                            "--batch_size", "4",
-                            "--session_name", "no_pretrain_higher_lr",
-                            "--data_dir", "C:/Development/volksbot/autonomerVolksbot/data/",
-                            "--train_dir", "train_lane",
-                            "--train_dir", "train_lane_curve",
-                            "--train_dir", "train_lane_outer_correction",
-                            "--train_dir", "train_lane_inner_correction",
-                            "--val_dir", "test_course_oldcfg",
-                            "--take_or_skip", "0",
-                            "--epochs", "20",
-                            "--show_summary", "1",
-                            "--pretrained", "0",
-                            "--learning_rate", "1e-4",
-                            "--decay_rate", "2e-5",
-                            "--plot_progress", "1"]))
-    main(parser.parse_args(["--model_file", "mobilenet_cls",
-                            "--run_dir", "C:/Development/volksbot/autonomerVolksbot/run",
-                            "--batch_size", "4",
-                            "--session_name", "no_pretrain",
-                            "--data_dir", "C:/Development/volksbot/autonomerVolksbot/data/",
-                            "--train_dir", "train_lane",
-                            "--train_dir", "train_lane_curve",
-                            "--train_dir", "train_lane_outer_correction",
-                            "--train_dir", "train_lane_inner_correction",
-                            "--val_dir", "test_course_oldcfg",
-                            "--take_or_skip", "0",
-                            "--epochs", "20",
-                            "--show_summary", "1",
-                            "--pretrained", "0",
-                            "--plot_progress", "1"]))
+    main(parser.parse_args())

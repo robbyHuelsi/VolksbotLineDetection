@@ -64,7 +64,6 @@ def recorder():
         os.makedirs(full_dir)
 
     if not os.path.exists(img_dir):
-        # os.makedirs(img_dir)
         os.makedirs(img_dir_left)
         os.makedirs(img_dir_right)
         os.makedirs(img_dir_left_rect)
@@ -72,8 +71,8 @@ def recorder():
 
     # Initialize the node and subscribe to two topics
     rospy.init_node('recorder', anonymous=True)
-    # rospy.Subscriber('/left/image_raw_color/compressed', CompressedImage, lambda x: img_callback(x, "left"))
-    # rospy.Subscriber('/right/image_raw_color/compressed', CompressedImage, lambda x: img_callback(x, "right"))
+
+    # Subscribe to the correct topics (that the camera is publishing) here
     rospy.Subscriber('/left/image_rect_color/compressed', CompressedImage, lambda x: img_callback(x, "left_rect"))
     rospy.Subscriber('/right/image_rect_color/compressed', CompressedImage, lambda x: img_callback(x, "right_rect"))
     rospy.Subscriber('/cmd_vel', Twist, cmd_callback)

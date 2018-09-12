@@ -1,1 +1,6 @@
-__all__ = ["inputFunctions", "trainTensorFlow"]
+__all__ = ["inputFunctions",
+           "trainTensorFlow",
+           "plotFunctions",
+           "outputFunctions",
+           "generateDataset",
+           "analysisFunctions"]

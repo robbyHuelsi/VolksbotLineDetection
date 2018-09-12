@@ -4,8 +4,6 @@ import numpy as np
 import cv2
 import tensorflow as tf
 import argparse
-import time
-import matplotlib.pyplot as plt
 
 from sensor_msgs.msg import CompressedImage
 from geometry_msgs.msg import Twist
@@ -29,7 +27,7 @@ class Image2TwistNode:
         # Strip away ROS specific arguments and parse the residual arguments
         self.args = parser.parse_args(rospy.myargv(rospy.myargv()[1:]))
 
-        # If the script is run from launch file, the args might be none. Ask the ros param server instead!
+        # If the script is run from a launch file, the args might be none. In this case ask the ros param server!
         if self.args.model_file is None and self.args.restore_file is None:
             self.args.model_file = rospy.get_param("~model_file")
             self.args.restore_file = rospy.get_param("~restore_file")
@@ -42,19 +40,15 @@ class Image2TwistNode:
         if self.args.model_file is None or self.args.restore_file is None:
             raise ValueError("Name of 'model_file' and absolute path to 'restore_file' are mandatory!")
 
-        # Set and get Tensorflow specific settings
+        # Set and get Tensorflow specific settings (here: verbosity and version)
         tf.logging.set_verbosity(tf.logging.INFO)
         rospy.loginfo("Tensorflow version {} loaded!".format(tf.__version__))
 
         # Initialize the Keras model and helper from model_file and restore the weights
         self.model, self.helper = build_model(self.args.model_file, self.args, for_training=False)
         restore_recent_weights(self.model, "", self.args.restore_file)
+        # This call is necessary to use the model just for prediction!
         self.model._make_predict_function()
-
-        # TODO: Remove this code because it destroyed the preloaded weights!
-        # self.session = tf.keras.backend.get_session()
-        # self.graph = tf.get_default_graph()
-        # self.graph.finalize()
 
         # Set max delay to 40ms because at 40 FPS an image should be received after 33ms
         self.max_delay = rospy.Duration.from_sec(0.04)
@@ -63,6 +57,7 @@ class Image2TwistNode:
         self.sub = rospy.Subscriber('image', CompressedImage, self.img_callback, queue_size=1)
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=1)
         self.img_pub = rospy.Publisher('image_resized/compressed', CompressedImage, queue_size=1)
+
         rospy.loginfo("Image2Twist predictor is ready!")
         rospy.spin()
 
@@ -75,7 +70,7 @@ class Image2TwistNode:
         else:
             rospy.loginfo("Received image delayed by {}ns".format(callback_start - img_msg.header.stamp))
 
-        # TODO Check: Image conversion from msg -> cv2 (BGR) -> np (RGB)
+        # Image conversion from msg -> cv2 (BGR) -> np (RGB)
         np_arr = np.fromstring(img_msg.data, np.uint8)
         np_img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
         np_img = np_img[:, :, ::-1]
@@ -87,13 +82,11 @@ class Image2TwistNode:
         np_img = resize(np_img, (224, 224))
         np_img = np.multiply(np.subtract(np_img, 0.5), 2.0)
 
+        # Calculate some durations for evaluation
         prep_end = rospy.Time.now()
         prep_dur = prep_end - callback_start
 
-        # TODO Remove this after evaluation
-        # Run prediction for the current image
-        # with self.session.as_default():
-        #    with self.graph.as_default():
+        # Do the actual control value prediction based on the current image right now
         output = self.model.predict(np.expand_dims(np_img, axis=0))
         prediction = self.helper.postprocess_output(output)
 
@@ -117,11 +110,6 @@ class Image2TwistNode:
 
         # Publish new image
         self.img_pub.publish(msg)
-
-        # plt.clf()
-        # plt.cla()
-        # plt.imshow((np_img/2.0)+0.5)
-        # plt.waitforbuttonpress()
 
 
 if __name__ == '__main__':
